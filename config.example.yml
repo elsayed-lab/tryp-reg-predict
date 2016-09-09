@@ -1,0 +1,39 @@
+#
+# Example configuration
+#
+
+
+# output path
+output_dir: /path/to/output_dir
+
+#
+# Input files
+#
+
+# genome sequence and annotations
+input_gff: /ref/annotations/TriTrypDB-28_LmajorFriedlin.gff
+input_fasta: /ref/genomes/TriTrypDB-28_LmajorFriedlin_Genome.fasta
+
+# count table and cluster assignments
+count_table: /path/to/lmajor_raw_counts.csv
+cluster_assignments: /path/to/lmajor_cluster_assignments.csv
+
+# utr statistics (length, gc- and ct-richness)
+utr5_stats: /path/to/utr5_stats.csv
+utr3_stats: /path/to/utr3_stats.csv
+
+# polypyrimidine, intergenic and inter-cds stats
+intergenic_stats: /path/to/intercds_regions.csv
+polypyrimidine_stats: /path/to/polypyrimidine_tracts.csv
+
+#
+# Software settings
+#
+extreme_dir: /path/to/extreme
+extreme_half_length:  9,
+extreme_min_gap_size: 60,
+extreme_max_gap_size: 69,
+extreme_min_sites   : 3,
+extreme_clustering_threshold: 0.3,
+extreme_negative_sample_size: 150
+
