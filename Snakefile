@@ -33,13 +33,18 @@ rule create_training_set:
     # script:
     #     "scripts/create_training_set.py"
 
-rule filter_and_combine_motifs:
+"""
+Combine motifs, filtering out redundant or low information ones.
+"""
+rule combine_motifs:
     input:
-        utr5=expand("build/motifs/extreme/5utr/{module}.csv", module=MODULES),
-        utr3=expand("build/motifs/extreme/3utr/{module}.csv", module=MODULES)
+        utr5=expand("build/motifs/extreme/5utr/{module}.words", module=MODULES)
+        # utr3=expand("build/motifs/extreme/3utr/{module}.words", module=MODULES)
     output:
-        utr5="build/motifs/extreme/5utr-filtered.csv",
-        utr3="build/motifs/extreme/3utr-filtered.csv"
+        utr5="build/motifs/extreme/5utr-filtered.csv"
+        # utr3="build/motifs/extreme/3utr-filtered.csv"
+    shell:
+        "touch {output}"
 
 """
 Compute Codon Adaptation Index for each CDS in the genome.
@@ -55,8 +60,8 @@ rule get_module_5utr_sequences:
         module_assignments=config['module_assignments'],
         utr_stats=config['5utr_stats']
     output:
-        expand("build/sequences/5utr/{module}.fa", module=MODULES),
-        expand("build/sequences/5utr/negative/{module}.fa", module=MODULES)
+        "build/sequences/5utr/{module}.fa",
+        "build/sequences/5utr/negative/{module}.fa"
     params:
         build_dir='build/sequences/5utr'
     script:
@@ -67,8 +72,8 @@ rule get_module_3utr_sequences:
         module_assignments=config['module_assignments'],
         utr_stats=config['3utr_stats']
     output:
-        expand("build/sequences/3utr/{module}.fa", module=MODULES),
-        expand("build/sequences/3utr/negative/{module}.fa", module=MODULES)
+        "build/sequences/3utr/{module}.fa",
+        "build/sequences/3utr/negative/{module}.fa"
     params:
         build_dir='build/sequences/3utr'
     script:
@@ -76,28 +81,42 @@ rule get_module_3utr_sequences:
 
 rule detect_5utr_motifs_extreme:
     input:
-        utr5_seqs=expand("build/sequences/5utr/{module}.fa", module=MODULES),
-        utr5_neg_seqs=expand("build/sequences/5utr/negative/{module}.fa", module=MODULES)
+        utr5_seqs="build/sequences/5utr/{module}.fa",
+        utr5_neg_seqs="build/sequences/5utr/negative/{module}.fa"
     output:
-        expand("build/motifs/extreme/5utr/{module}.csv", module=MODULES)
+        "build/motifs/extreme/5utr/{module}.words"
     params:
-        build_dir='build/motifs/extreme/5utr'
+        build_dir="build/motifs/extreme/5utr",
+        word_file="build/motifs/extreme/5utr/{module}.words",
+        weight_matrix="build/motifs/extreme/5utr/{module}.wm"
     shell:
         """
-        python2 {config.extreme_dir}/src/GappedKmerSearch.py -l 8 -ming 0 -maxg 10 -minsites 5 GM12878_NRSF_ChIP.fasta GM12878_NRSF_ChIP_shuffled.fasta GM12878_NRSF_ChIP.words
-        perl {config.extreme_dir}/src/run_consensus_clusering_using_wm.pl GM12878_NRSF_ChIP.words 0.3
-        python2 {config.extreme_dir}/src/Consensus2PWM.py GM12878_NRSF_ChIP.words.cluster.aln GM12878_NRSF_ChIP.wm
-        """
+        python2 {config[extreme_dir]}/src/GappedKmerSearch.py \
+            -l {config[extreme_half_length]} \
+            -ming {config[extreme_min_gap_size]} \
+            -maxg {config[extreme_max_gap_size]} \
+            -minsites {config[extreme_min_sites]} \
+            {input.utr5_seqs} \
+            {input.utr5_neg_seqs} \
+            {params.word_file}
 
-rule detect_3utr_motifs_extreme:
-    input:
-        utr3_seqs=expand("build/sequences/3utr/{module}.fa", module=MODULES),
-        utr3_neg_seqs=expand("build/sequences/3utr/negative/{module}.fa", module=MODULES)
-    output:
-        expand("build/motifs/extreme/3utr/{module}.csv", module=MODULES)
-    params:
-        build_dir='build/motifs/extreme/3utr'
-    shell:
-        "touch {output}"
+        perl {config[extreme_dir]}/src/run_consensus_clusering_using_wm.pl \
+            {params.word_file} {config[extreme_clustering_threshold]}
+
+        python2 {config[extreme_dir]}/src/Consensus2PWM.py \
+            {params.word_file}.cluster.aln \
+            {params.weight_matrix}
+
+        for i in `seq 1 {config[extreme_max_motif_seeds]}`; do
+            if [[ -n $(grep ">cluster$i\s" {params.weight_matrix}) ]]; then
+                python2 {config[extreme_dir]}/src/EXTREME.py \
+                    {input.utr5_seqs} \
+                    {input.utr5_neg_seqs} \
+                    --saveseqs \
+                    {params.weight_matrix} \
+                    $i
+                fi
+        done
+        """
 
 # vim: ft=python
