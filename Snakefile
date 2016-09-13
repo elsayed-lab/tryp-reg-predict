@@ -38,13 +38,15 @@ Combine motifs, filtering out redundant or low information ones.
 """
 rule combine_motifs:
     input:
-        utr5=expand("build/motifs/extreme/5utr/{module}.words", module=MODULES)
-        # utr3=expand("build/motifs/extreme/3utr/{module}.words", module=MODULES)
+        utr5_extreme=expand("build/motifs/extreme/5utr/{module}.finished", module=MODULES)
+        # utr3=expand("build/motifs/extreme/3utr/{module}.meme", module=MODULES)
     output:
         utr5="build/motifs/extreme/5utr-filtered.csv"
         # utr3="build/motifs/extreme/3utr-filtered.csv"
     shell:
         "touch {output}"
+    # script:
+    #     "scripts/combine_motifs.R"
 
 """
 Compute Codon Adaptation Index for each CDS in the genome.
@@ -84,11 +86,11 @@ rule detect_5utr_motifs_extreme:
         utr5_seqs="build/sequences/5utr/{module}.fa",
         utr5_neg_seqs="build/sequences/5utr/negative/{module}.fa"
     output:
-        "build/motifs/extreme/5utr/{module}.words"
+        "build/motifs/extreme/5utr/{module}.finished"
     params:
         build_dir="build/motifs/extreme/5utr",
         word_file="build/motifs/extreme/5utr/{module}.words",
-        weight_matrix="build/motifs/extreme/5utr/{module}.wm"
+        weight_matrix="build/motifs/extreme/5utr/{module}.wm",
     shell:
         """
         python2 {config[extreme_dir]}/src/GappedKmerSearch.py \
@@ -117,6 +119,8 @@ rule detect_5utr_motifs_extreme:
                     $i
                 fi
         done
+
+        touch {output}
         """
 
 # vim: ft=python
