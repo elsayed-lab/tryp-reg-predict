@@ -38,11 +38,11 @@ Combine motifs, filtering out redundant or low information ones.
 """
 rule combine_motifs:
     input:
-        utr5_extreme=expand("build/motifs/extreme/5utr/{module}.finished", module=MODULES)
-        # utr3=expand("build/motifs/extreme/3utr/{module}.meme", module=MODULES)
+        expand("build/motifs/extreme/{utr}/{module}.finished",
+               utr=['5utr', '3utr'], module=MODULES)
     output:
-        utr5="build/motifs/extreme/5utr-filtered.csv"
-        # utr3="build/motifs/extreme/3utr-filtered.csv"
+        "build/motifs/extreme/5utr-filtered.csv",
+        "build/motifs/extreme/3utr-filtered.csv"
     shell:
         "touch {output}"
     # script:
@@ -57,40 +57,35 @@ rule compute_cai:
     script:
         "scripts/compute_cai.py"
 
-rule get_module_5utr_sequences:
+"""
+Generates FASTA files for all 5' and 3'UTRs
+"""
+rule get_module_utr_sequences:
     input:
-        module_assignments=config['module_assignments'],
-        utr_stats=config['5utr_stats']
+        module_assignments=config['module_assignments']
     output:
-        "build/sequences/5utr/{module}.fa",
-        "build/sequences/5utr/negative/{module}.fa"
+        "build/sequences/{utr}/{module}.fa",
+        "build/sequences/{utr}/negative/{module}.fa"
     params:
-        build_dir='build/sequences/5utr'
+        utr='{utr}',
+        build_dir='build/sequences/{utr}'
     script:
         "scripts/get_module_utr_sequences.py"
 
-rule get_module_3utr_sequences:
+"""
+Performs RNA motif detection using EXTREME
+http://www.ncbi.nlm.nih.gov/pubmed/24532725
+"""
+rule detect_utr_motifs_extreme:
     input:
-        module_assignments=config['module_assignments'],
-        utr_stats=config['3utr_stats']
+        utr_seqs="build/sequences/{utr}/{module}.fa",
+        utr_neg_seqs="build/sequences/{utr}/negative/{module}.fa"
     output:
-        "build/sequences/3utr/{module}.fa",
-        "build/sequences/3utr/negative/{module}.fa"
+        "build/motifs/extreme/{utr}/{module}.finished"
     params:
-        build_dir='build/sequences/3utr'
-    script:
-        "scripts/get_module_utr_sequences.py"
-
-rule detect_5utr_motifs_extreme:
-    input:
-        utr5_seqs="build/sequences/5utr/{module}.fa",
-        utr5_neg_seqs="build/sequences/5utr/negative/{module}.fa"
-    output:
-        "build/motifs/extreme/5utr/{module}.finished"
-    params:
-        build_dir="build/motifs/extreme/5utr",
-        word_file="build/motifs/extreme/5utr/{module}.words",
-        weight_matrix="build/motifs/extreme/5utr/{module}.wm",
+        build_dir="build/motifs/extreme/{utr}",
+        word_file="build/motifs/extreme/{utr}/{module}.words",
+        weight_matrix="build/motifs/extreme/{utr}/{module}.wm",
     shell:
         """
         python2 {config[extreme_dir]}/src/GappedKmerSearch.py \
@@ -98,8 +93,8 @@ rule detect_5utr_motifs_extreme:
             -ming {config[extreme_min_gap_size]} \
             -maxg {config[extreme_max_gap_size]} \
             -minsites {config[extreme_min_sites]} \
-            {input.utr5_seqs} \
-            {input.utr5_neg_seqs} \
+            {input.utr_seqs} \
+            {input.utr_neg_seqs} \
             {params.word_file}
 
         perl {config[extreme_dir]}/src/run_consensus_clusering_using_wm.pl \
@@ -112,8 +107,8 @@ rule detect_5utr_motifs_extreme:
         for i in `seq 1 {config[extreme_max_motif_seeds]}`; do
             if [[ -n $(grep ">cluster$i\s" {params.weight_matrix}) ]]; then
                 python2 {config[extreme_dir]}/src/EXTREME.py \
-                    {input.utr5_seqs} \
-                    {input.utr5_neg_seqs} \
+                    {input.utr_seqs} \
+                    {input.utr_neg_seqs} \
                     --saveseqs \
                     {params.weight_matrix} \
                     $i

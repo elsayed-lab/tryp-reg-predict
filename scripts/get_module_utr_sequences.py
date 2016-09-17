@@ -12,7 +12,8 @@ import pandas as pd
 module_assignments = pd.read_table(snakemake.input['module_assignments'])
 
 # load UTR statistics and sequences
-utr_stats = pd.read_csv(snakemake.input['utr_stats'])
+utr_stats_filepath = snakemake.config[snakemake.params['utr'] + '_stats']
+utr_stats = pd.read_csv(utr_stats_filepath)
 
 # dataframe indices
 GENE_IDX = 1
