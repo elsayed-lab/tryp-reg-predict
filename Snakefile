@@ -17,7 +17,10 @@ df = pd.read_table(config['module_assignments'])
 MODULES = list(df.color.unique())
 
 # TEMP: limit to first 3 modules during testing...
-MODULES = MODULES[:10]
+MODULES = MODULES[:50]
+
+# EXTREME runs
+EXTREME_RUNS = config['extreme_settings'].keys()
 
 #
 # snakemake directives
@@ -38,8 +41,8 @@ Combine motifs, filtering out redundant or low information ones.
 """
 rule combine_motifs:
     input:
-        expand("build/motifs/extreme/{utr}/{module}/{module}.finished",
-               utr=['5utr', '3utr'], module=MODULES)
+        expand("build/motifs/extreme/{run}/{utr}/{module}/{module}.finished",
+               utr=['5utr', '3utr'], run=EXTREME_RUNS, module=MODULES)
     output:
         "build/motifs/extreme/5utr-filtered.csv",
         "build/motifs/extreme/3utr-filtered.csv"
@@ -81,33 +84,38 @@ rule detect_utr_motifs_extreme:
         utr_seqs="build/sequences/{utr}/{module}.fa",
         utr_neg_seqs="build/sequences/{utr}/negative/{module}.fa"
     output:
-        "build/motifs/extreme/{utr}/{module}/{module}.finished"
+        "build/motifs/extreme/{run}/{utr}/{module}/{module}.finished"
+    params:
+        half_length=lambda wildcards: config['extreme_settings'][wildcards.run]['half_length'],
+        ming=lambda wildcards: config['extreme_settings'][wildcards.run]['min_gap_size'],
+        maxg=lambda wildcards: config['extreme_settings'][wildcards.run]['max_gap_size'],
+        min_sites=lambda wildcards: config['extreme_settings'][wildcards.run]['min_sites'],
+        clustering_threshold=lambda wildcards: config['extreme_settings'][wildcards.run]['clustering_threshold'],
+        max_motif_seeds=lambda wildcards: config['extreme_settings'][wildcards.run]['max_motif_seeds']
     shell:
         """
         cd $(dirname {output})
 
-        echo "===TEST==="
-        echo $(pwd)
-        echo {config[output_dir]}/{input.utr_seqs}
-        echo "===TEST==="
+        echo {params.ming}
 
         python2 {config[extreme_dir]}/src/GappedKmerSearch.py \
-            -l {config[extreme_half_length]} \
-            -ming {config[extreme_min_gap_size]} \
-            -maxg {config[extreme_max_gap_size]} \
-            -minsites {config[extreme_min_sites]} \
+            -l {params.half_length} \
+            -ming {params.ming} \
+            -maxg {params.maxg} \
+            -minsites {params.min_sites} \
             {config[output_dir]}/{input.utr_seqs} \
             {config[output_dir]}/{input.utr_neg_seqs} \
             {wildcards.module}.words
 
         perl {config[extreme_dir]}/src/run_consensus_clusering_using_wm.pl \
-            {wildcards.module}.words {config[extreme_clustering_threshold]}
+            {wildcards.module}.words \
+            {params.clustering_threshold}
 
         python2 {config[extreme_dir]}/src/Consensus2PWM.py \
             {wildcards.module}.words.cluster.aln \
             {wildcards.module}.wm
         
-        for i in `seq 1 {config[extreme_max_motif_seeds]}`; do
+        for i in `seq 1 {params.max_motif_seeds}`; do
             if [[ -n $(grep ">cluster$i\s" {wildcards.module}.wm) ]]; then
                 python2 {config[extreme_dir]}/src/EXTREME.py \
                     {config[output_dir]}/{input.utr_seqs} \
