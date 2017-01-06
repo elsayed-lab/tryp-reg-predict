@@ -7,6 +7,9 @@
 # filtered out to obtain a reduced set of informative motifs.
 #
 ###############################################################################
+library('Biostrings')
+library('seqLogo')
+options(stringsAsFactors=FALSE)
 
 ###############################################################################
 #
@@ -21,26 +24,127 @@
 # - http://cran.r-project.org/web/packages/MEET/index.html
 #
 ###############################################################################
-load_meme_pwm = function(filepath) {
+load_meme_pwm <- function(filepath) {
     # Read file contents
-    lines = readLines(filepath)
+    lines <- readLines(filepath)
 
     # Matrix starts on line 14 and goes until next to last line
-    MATRIX_START = 14
-    MATRIX_END   = length(lines) - 1
+    MATRIX_START <- 14
+    MATRIX_END   <- length(lines) - 1
 
     # Get matrix lines
-    lines = lines[MATRIX_START:MATRIX_END]
+    lines <- lines[MATRIX_START:MATRIX_END]
 
     # Create matrix
-    pwm = matrix(nrow=length(lines), ncol=4)
+    pwm <- matrix(nrow=length(lines), ncol=4)
 
-    i = 1
+    i <- 1
     for (line in lines) {
-        parts = unlist(strsplit(line, '\\s'))
-        pwm[i,] = as.numeric(parts[parts != ""])
-        i = i + 1
+        parts <- unlist(strsplit(line, '\\s'))
+        pwm[i,] <- as.numeric(parts[parts != ""])
+        i <- i + 1
     }
-    colnames(pwm) = c("A", "C", "G", "T")
+    colnames(pwm) <- c("A", "C", "G", "T")
     return(t(pwm))
 }
+
+# list of all motifs detected across all modules and all runs
+build_dir <- dirname(snakemake@output$utr5)
+
+infiles_5utr <- Sys.glob(file.path(build_dir, '*', '5utr', '*', '*', '*.meme'))
+infiles_3utr <- Sys.glob(file.path(build_dir, '*', '3utr', '*', '*', '*.meme'))
+
+# load motif PWMs
+motifs_5utr <- list()
+
+for (infile in infiles_5utr) {
+    # load motif
+    motifs_5utr[[infile]] <- load_meme_pwm(infile)
+
+    # generate sequence logo
+    png(sub('.meme', '.png', infile))
+    seqLogo(motifs_5utr[[infile]])
+    dev.off()
+}
+
+motifs_3utr <- list()
+
+for (infile in infiles_3utr) {
+    motifs_3utr[[infile]] <- load_meme_pwm(infile)
+
+    # generate sequence logo
+    png(sub('.meme', '.png', infile))
+    seqLogo(motifs_3utr[[infile]])
+    dev.off()
+}
+
+#
+# Quantify gene-level motif presence
+#
+
+# load 5'UTR sequences
+utr5_seqs <- read.csv(snakemake@config[['5utr_stats']])
+
+# create an empty data frame to store counts
+utr5_counts <- NULL
+
+# iterate over 5'UTR sequences
+for (i in 1:nrow(utr5_seqs)) {
+    # get gene UTR sequence
+    utr <- utr5_seqs[i,]$seq
+
+    # vector to store motif counts for gene
+    entries <- c()
+
+    message(sprintf("Counting 5'UTR motif occurrences for gene %d/%d",
+                    i, nrow(utr5_seqs)))
+
+    # Iterate over motifs and count occurrences of each motif in the UTR
+    for (motif in motifs_5utr) {
+        entries <- append(entries, countPWM(motif, utr))
+    }
+
+    # Add row to data frame
+    utr5_counts <- rbind(utr5_counts, entries)
+}
+
+# Convert to a data frame
+utr5_counts <- data.frame(utr5_counts)
+rownames(utr5_counts) <- utr5_seqs$gene
+colnames(utr5_counts) <- names(motifs_5utr)
+
+# load 3'UTR sequences
+utr3_seqs <- read.csv(snakemake@config[['3utr_stats']])
+
+# create an empty data frame to store counts
+utr3_counts <- NULL
+
+# iterate over 3'UTR sequences
+for (i in 1:nrow(utr3_seqs)) {
+    # get gene UTR sequence
+    utr <- utr3_seqs[i,]$seq
+
+    # vector to store motif counts for gene
+    entries <- c()
+
+    message(sprintf("Counting 3'UTR motif occurrences for gene %d/%d",
+                    i, nrow(utr3_seqs)))
+
+    # Iterate over motifs and count occurrences of each motif in the UTR
+    for (motif in motifs_3utr) {
+        entries <- append(entries, countPWM(motif, utr))
+    }
+
+    # Add row to data frame
+    utr3_counts <- rbind(utr3_counts, entries)
+}
+
+# Convert to a data frame
+utr3_counts <- data.frame(utr3_counts)
+rownames(utr3_counts) <- utr3_seqs$gene
+colnames(utr3_counts) <- names(motifs_3utr)
+
+# save output
+write.csv(utr5_counts, file=snakemake@output$utr5)
+write.csv(utr3_counts, file=snakemake@output$utr3)
+

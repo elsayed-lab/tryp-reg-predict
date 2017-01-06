@@ -17,7 +17,7 @@ df = pd.read_table(config['module_assignments'])
 MODULES = list(df.color.unique())
 
 # TEMP: limit to first 3 modules during testing...
-MODULES = MODULES[:50]
+MODULES = MODULES[:3]
 
 # EXTREME runs
 EXTREME_RUNS = config['extreme_settings'].keys()
@@ -44,12 +44,12 @@ rule combine_motifs:
         expand("build/motifs/extreme/{run}/{utr}/{module}/{module}.finished",
                utr=['5utr', '3utr'], run=EXTREME_RUNS, module=MODULES)
     output:
-        "build/motifs/extreme/5utr-filtered.csv",
-        "build/motifs/extreme/3utr-filtered.csv"
-    shell:
-        "touch {output}"
-    # script:
-    #     "scripts/combine_motifs.R"
+        utr5="build/motifs/extreme/5utr-filtered.csv",
+        utr3="build/motifs/extreme/3utr-filtered.csv"
+    # shell:
+    #     "touch {output}"
+    script:
+        "scripts/combine_motifs.R"
 
 """
 Compute Codon Adaptation Index for each CDS in the genome.
