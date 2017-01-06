@@ -10,9 +10,9 @@ output_dir: /path/to/output_dir
 #
 
 # genome sequence and annotations
-input_gff: /ref/annotations/TriTrypDB-28_LmajorFriedlin.gff
-input_fasta: /ref/genomes/TriTrypDB-28_LmajorFriedlin_Genome.fasta
-input_cds_fasta: /ref/genomes/TriTrypDB-28_LmajorFriedlin_AnnotatedCDSs.fasta
+input_gff: /ref/annotations/TriTrypDB-29_LmajorFriedlin.gff
+input_fasta: /ref/genomes/TriTrypDB-29_LmajorFriedlin_Genome.fasta
+input_cds_fasta: /ref/genomes/TriTrypDB-29_LmajorFriedlin_AnnotatedCDSs.fasta
 
 # count table and module assignments
 count_table: /path/to/lmajor_raw_counts.csv

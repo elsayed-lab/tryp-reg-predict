@@ -52,4 +52,3 @@ for module in module_assignments.color.unique():
             fp.write('>%s\n' % entry[GENE_IDX])
             fp.write('%s\n' % entry[SEQ_IDX])
 
-
