@@ -16,9 +16,6 @@ df = pd.read_table(config['module_assignments'])
 # get a list of the co-expression modules
 MODULES = list(df.color.unique())
 
-# TEMP: limit to first 3 modules during testing...
-MODULES = MODULES[:3]
-
 # EXTREME runs
 EXTREME_RUNS = config['extreme_settings'].keys()
 
