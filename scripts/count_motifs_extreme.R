@@ -1,15 +1,15 @@
 #!/usr/bin/env Rscript
 ###############################################################################
+#
+# count_motifs_extreme.R
+# keith hughitt (khughitt@umd.edu)
+#
 # Loads detected motifs and creates a utr-motif matrix quantifying the
 # presence of motifs for each 5' and 5'UTR.
-#
-# Highly correlated motifs and those with low variance across genes are
-# filtered out to obtain a reduced set of informative motifs.
 #
 ###############################################################################
 library('Biostrings')
 library('seqLogo')
-library('caret')
 options(stringsAsFactors=FALSE)
 
 ###############################################################################
@@ -144,34 +144,6 @@ for (i in 1:nrow(utr3_seqs)) {
 utr3_counts <- data.frame(utr3_counts)
 rownames(utr3_counts) <- utr3_seqs$gene
 colnames(utr3_counts) <- names(motifs_3utr)
-
-# Use the caret findCorrelation function to find and remove highly correlated
-# variables
-
-# 5' UTR
-cor_mat_5utr <- cor(utr5_counts, method='spearman')
-cor_mat_5utr[is.na(cor_mat_5utr)] <- 0
-
-motifs_to_ignore <- findCorrelation(cor_mat_5utr, cutoff=0.5, verbose=FALSE)
-utr5_counts <- utr5_counts[,-motifs_to_ignore]
-
-print(sprintf("Ignoring %d/%d highly-correlated 5' UTR motifs...",
-              length(motifs_to_ignore), nrow(cor_mat_5utr)))
-print(sprintf("Remaining motifs: %d", ncol(utr5_counts)))
-
-cor_mat_5utr <- cor(utr5_counts, method='spearman')
-cor_mat_5utr[is.na(cor_mat_5utr)] <- 0
-
-# 3' UTR
-cor_mat_3utr <- cor(utr3_counts, method='spearman')
-cor_mat_3utr[is.na(cor_mat_3utr)] <- 0
-
-motifs_to_ignore <- findCorrelation(cor_mat_3utr, cutoff=0.5, verbose=FALSE)
-utr3_counts <- utr3_counts[,-motifs_to_ignore]
-
-print(sprintf("Ignoring %d/%d highly-correlated 3' UTR motifs...",
-              length(motifs_to_ignore), nrow(cor_mat_3utr)))
-print(sprintf("Remaining motifs: %d", ncol(utr3_counts)))
 
 # save output
 write.csv(utr5_counts, file=snakemake@output$utr5)

@@ -39,35 +39,64 @@ rule create_training_set:
     # script:
     #     "scripts/create_training_set.py"
 
+
 """
-Combine motif output from EXTREME, filtering out redundant or low information ones.
+Scans co-expression clusters for presence of motifs detected using EXTREME
 """
-rule combine_extreme_motifs:
+rule count_motifs_extreme:
     input:
         expand("build/motifs/extreme/{run}/{utr}/{module}/{module}.finished",
                utr=['5utr', '3utr'], run=EXTREME_RUNS, module=MODULES)
     output:
-        utr5="build/motifs/extreme/5utr-filtered.csv",
-        utr3="build/motifs/extreme/3utr-filtered.csv"
-    # shell:
-    #     "touch {output}"
+        utr5="build/motifs/5utr-extreme-motif-counts.csv",
+        utr3="build/motifs/3utr-extreme-motif-counts.csv"
     script:
-        "scripts/combine_meme_motifs.R"
+        "scripts/count_motifs_extreme.R"
 
 """
-Combine motif output from CMFinder, filtering out redundant or low information ones.
+Combines motif search output from cmsearch into a single table
 """
-rule combine_cmfinder_motifs:
-    input:
-        expand("build/motifs/cmfinder/{utr}/{module}/{module}.finished",
+rule combine_cmsearch_results:
+    input: 
+        expand("build/motifs/cmfinder/{utr}/{module}/{module}.cmsearch.gz",
                utr=['5utr', '3utr'], module=MODULES)
     output:
-        utr5="build/motifs/cmfinder/5utr-filtered.csv",
-        utr3="build/motifs/cmfinder/3utr-filtered.csv"
+        utr5="build/motifs/5utr-cmfinder-motif-counts.csv",
+        utr3="build/motifs/3utr-cmfinder-motif-counts.csv"
     # shell:
     #     "touch {output}"
     script:
-        "scripts/combine_cmfinder_motifs.R"
+        "scripts/combine_cmsearch_results.py"
+
+"""
+Scans co-expression clusters for presence of motifs detected using CMFinder
+"""
+rule count_motifs_cmfinder:
+    input:
+        "build/motifs/cmfinder/{utr}/{module}/{module}.finished"
+    output:
+        "build/motifs/cmfinder/{utr}/{module}/{module}.cmsearch.gz"
+    shell:
+        """
+        # full path to output file
+        outfile={config[output_dir]}/{output}
+
+        cd $(dirname {input})
+
+        # for each detected motif, iterate over all UTR sequences and count the
+        # occurences of that motif
+        for motif in *.cm; do
+            for utr_seqs in {config[output_dir]}/build/sequences/*/*.fa; do
+                cmsearch --noali \
+                         -E {config[cmfinder_settings][evalue_cutoff]} \
+                         ${{motif}} \
+                         ${{utr_seqs}} >> ${{outfile/.gz//}}
+            done
+        done
+
+        # compress results
+        gzip ${{outfile}}
+        """
 
 """
 Compute Codon Adaptation Index for each CDS in the genome.
