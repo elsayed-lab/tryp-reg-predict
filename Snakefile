@@ -16,6 +16,12 @@ df = pd.read_table(config['module_assignments'])
 # get a list of the co-expression modules
 MODULES = list(df.color.unique())
 
+# exclude unassigned (grey) genes
+MODULES.remove('grey')
+
+# TEMP: Debugging
+MODULES = MODULES[:5]
+
 # EXTREME runs
 EXTREME_RUNS = config['extreme_settings'].keys()
 
@@ -34,9 +40,9 @@ rule create_training_set:
     #     "scripts/create_training_set.py"
 
 """
-Combine motifs, filtering out redundant or low information ones.
+Combine motif output from EXTREME, filtering out redundant or low information ones.
 """
-rule combine_motifs:
+rule combine_extreme_motifs:
     input:
         expand("build/motifs/extreme/{run}/{utr}/{module}/{module}.finished",
                utr=['5utr', '3utr'], run=EXTREME_RUNS, module=MODULES)
@@ -46,7 +52,22 @@ rule combine_motifs:
     # shell:
     #     "touch {output}"
     script:
-        "scripts/combine_motifs.R"
+        "scripts/combine_meme_motifs.R"
+
+"""
+Combine motif output from CMFinder, filtering out redundant or low information ones.
+"""
+rule combine_cmfinder_motifs:
+    input:
+        expand("build/motifs/cmfinder/{utr}/{module}/{module}.finished",
+               utr=['5utr', '3utr'], module=MODULES)
+    output:
+        utr5="build/motifs/cmfinder/5utr-filtered.csv",
+        utr3="build/motifs/cmfinder/3utr-filtered.csv"
+    # shell:
+    #     "touch {output}"
+    script:
+        "scripts/combine_cmfinder_motifs.R"
 
 """
 Compute Codon Adaptation Index for each CDS in the genome.
@@ -73,6 +94,36 @@ rule get_module_utr_sequences:
         "scripts/get_module_utr_sequences.py"
 
 """
+Performs RNA motif detection using CMFinder
+"""
+rule detect_utr_motifs_cmfinder:
+    input:
+        utr_seqs="build/sequences/{utr}/{module}.fa"
+    output:
+        "build/motifs/cmfinder/{utr}/{module}/{module}.finished"
+    shell:
+        """
+        # create output directory and copy cluster utr sequences
+        cd $(dirname {output})
+        cp {config[output_dir]}/{input.utr_seqs} .
+
+        # run cmfinder
+        cmfinder.pl -f {config[cmfinder_settings][motif_fraction]} \
+                    -m {config[cmfinder_settings][min_length]} \
+                    -b $(basename {input.utr_seqs})
+
+        # rebuilt and calibrate the motif covariance models using infernal
+        for motif in *.motif.*; do
+            cmbuild ${{motif}}.cm ${{motif}}
+            cmcalibrate ${{motif}}.cm
+        done
+
+        rm latest.cm
+
+        touch {wildcards.module}.finished
+        """
+
+"""
 Performs RNA motif detection using EXTREME
 http://www.ncbi.nlm.nih.gov/pubmed/24532725
 """
@@ -92,8 +143,6 @@ rule detect_utr_motifs_extreme:
     shell:
         """
         cd $(dirname {output})
-
-        echo {params.ming}
 
         python2 {config[extreme_dir]}/src/GappedKmerSearch.py \
             -l {params.half_length} \
