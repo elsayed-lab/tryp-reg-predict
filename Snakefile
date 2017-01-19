@@ -61,10 +61,7 @@ rule combine_cmsearch_results:
         expand("build/motifs/cmfinder/{utr}/{module}/{module}.cmsearch.gz",
                utr=['5utr', '3utr'], module=MODULES)
     output:
-        utr5="build/motifs/5utr-cmfinder-motif-counts.csv",
-        utr3="build/motifs/3utr-cmfinder-motif-counts.csv"
-    # shell:
-    #     "touch {output}"
+        "build/motifs/cmfinder-motif-counts.csv",
     script:
         "scripts/combine_cmsearch_results.py"
 

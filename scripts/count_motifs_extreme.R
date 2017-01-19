@@ -112,7 +112,8 @@ for (i in 1:nrow(utr5_seqs)) {
 # Convert to a data frame
 utr5_counts <- data.frame(utr5_counts)
 rownames(utr5_counts) <- utr5_seqs$gene
-colnames(utr5_counts) <- names(motifs_5utr)
+colnames(utr5_counts) <- sub('MEMEoutput.meme', '', 
+                             sub('build/motifs/', '', names(motifs_5utr)))
 
 # load 3'UTR sequences
 utr3_seqs <- read.csv(snakemake@config[['3utr_stats']])
@@ -143,7 +144,8 @@ for (i in 1:nrow(utr3_seqs)) {
 # Convert to a data frame
 utr3_counts <- data.frame(utr3_counts)
 rownames(utr3_counts) <- utr3_seqs$gene
-colnames(utr3_counts) <- names(motifs_3utr)
+colnames(utr3_counts) <- sub('MEMEoutput.meme', '', 
+                             sub('build/motifs/', '', names(motifs_3utr)))
 
 # save output
 write.csv(utr5_counts, file=snakemake@output$utr5)
