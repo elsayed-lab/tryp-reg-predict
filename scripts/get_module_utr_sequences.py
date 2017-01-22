@@ -26,6 +26,10 @@ utr_stats[short_utrs].seq = utr_stats[short_utrs].static_seq
 utr_stats[short_utrs].gc = utr_stats[short_utrs].static_gc
 utr_stats[short_utrs].ct = utr_stats[short_utrs].static_ct
 
+# remove genes with many N's in their UTRs
+ratio_n = utr_stats.seq.str.count('N') / utr_stats.seq.apply(len)
+utr_stats = utr_stats[ratio_n < 0.25]
+
 # dataframe indices
 GENE_IDX = 1
 SEQ_IDX = 2
