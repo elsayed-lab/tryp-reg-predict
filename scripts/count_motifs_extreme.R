@@ -29,6 +29,8 @@ load_meme_pwm <- function(filepath) {
     # Read file contents
     lines <- readLines(filepath)
 
+    message(sprintf('running load_meme_pwm: %s', filepath))
+
     # Matrix starts on line 14 and goes until next to last line
     MATRIX_START <- 14
     MATRIX_END   <- length(lines) - 1
@@ -50,10 +52,10 @@ load_meme_pwm <- function(filepath) {
 }
 
 # list of all motifs detected across all modules and all runs
-build_dir <- dirname(snakemake@output$utr5)
+build_dir <- dirname(snakemake@output[[1]])
 
-infiles_5utr <- Sys.glob(file.path(build_dir, '*', '5utr', '*', '*', '*.meme'))
-infiles_3utr <- Sys.glob(file.path(build_dir, '*', '3utr', '*', '*', '*.meme'))
+infiles_5utr <- Sys.glob(file.path(build_dir, 'extreme', '*', '5utr', '*', '*', '*.meme'))
+infiles_3utr <- Sys.glob(file.path(build_dir, 'extreme', '*', '3utr', '*', '*', '*.meme'))
 
 # load motif PWMs
 motifs_5utr <- list()
@@ -147,7 +149,29 @@ rownames(utr3_counts) <- utr3_seqs$gene
 colnames(utr3_counts) <- sub('MEMEoutput.meme', '', 
                              sub('build/motifs/', '', names(motifs_3utr)))
 
-# save output
-write.csv(utr5_counts, file=snakemake@output$utr5)
-write.csv(utr3_counts, file=snakemake@output$utr3)
+# normalize gene entries across utr5/utr3 data frames
+utr5_missing <- row.names(utr3_counts)[!row.names(utr3_counts) %in% row.names(utr5_counts)]
+utr3_missing <- row.names(utr5_counts)[!row.names(utr5_counts) %in% row.names(utr3_counts)]
+
+if (length(utr5_missing) > 0) {
+    utr5_missing_entries <- matrix(0, nrow=length(utr5_missing), ncol=ncol(utr5_counts))
+    rownames(utr5_missing_entries) <- utr5_missing
+    colnames(utr5_missing_entries) <- colnames(utr5_counts)
+    utr5_counts <- rbind(utr5_counts, utr5_missing_entries)
+}
+
+if (length(utr3_missing) > 0) {
+    utr3_missing_entries <- matrix(0, nrow=length(utr3_missing), ncol=ncol(utr3_counts))
+    rownames(utr3_missing_entries) <- utr3_missing
+    colnames(utr3_missing_entries) <- colnames(utr3_counts)
+    utr3_counts <- rbind(utr3_counts, utr3_missing_entries)
+}
+
+
+# combine results and save output
+results <- merge(utr5_counts, utr3_counts, by='row.names')
+rownames(results) <- results$Row.names
+results <- results[,!colnames(results) == 'Row.names']
+
+write.csv(results, file=snakemake@output[[1]])
 

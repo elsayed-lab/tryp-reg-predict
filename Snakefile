@@ -19,9 +19,6 @@ MODULES = list(df.color.unique())
 # exclude unassigned (grey) genes
 MODULES.remove('grey')
 
-# TEMP: Debugging
-MODULES = MODULES[:5]
-
 # EXTREME runs
 EXTREME_RUNS = config['extreme_settings'].keys()
 
@@ -48,8 +45,7 @@ rule count_motifs_extreme:
         expand("build/motifs/extreme/{run}/{utr}/{module}/{module}.finished",
                utr=['5utr', '3utr'], run=EXTREME_RUNS, module=MODULES)
     output:
-        utr5="build/motifs/5utr-extreme-motif-counts.csv",
-        utr3="build/motifs/3utr-extreme-motif-counts.csv"
+        "build/motifs/extreme-motif-counts.csv"
     script:
         "scripts/count_motifs_extreme.R"
 

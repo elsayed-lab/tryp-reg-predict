@@ -15,6 +15,14 @@ module_assignments = pd.read_table(snakemake.input['module_assignments'])
 utr_stats_filepath = snakemake.config[snakemake.params['utr'] + '_stats']
 utr_stats = pd.read_csv(utr_stats_filepath)
 
+# If predicted UTR length is very short, use the "static" assumed UTR length
+# values instead (e.g. for T. cruzi, 75nt 5' UTR and 125nt 3' UTR)
+short_utrs = utr_stats.static_seq.apply(len) > utr_stats.seq.apply(len)
+
+utr_stats[short_utrs].seq = utr_stats[short_utrs].static_seq
+utr_stats[short_utrs].gc = utr_stats[short_utrs].static_gc
+utr_stats[short_utrs].ct = utr_stats[short_utrs].static_ct
+
 # dataframe indices
 GENE_IDX = 1
 SEQ_IDX = 2

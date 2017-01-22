@@ -17,7 +17,6 @@ def main():
 
     for filepath in snakemake.input:
         # parse cmsearch results for motifs from a single module
-        print("Parsing %s..." % filepath)
         df = parse_cmsearch_results(filepath)
 
         # update results matrix
