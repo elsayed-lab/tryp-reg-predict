@@ -11,6 +11,9 @@ import pandas as pd
 # load gene/module mapping
 module_assignments = pd.read_table(snakemake.input['module_assignments'])
 
+# Exclude ungrouped 'grey' module genes
+module_assignments = module_assignments[module_assignments.color != 'grey']
+
 # load UTR statistics and sequences
 utr_stats_filepath = snakemake.config[snakemake.params['utr'] + '_stats']
 utr_stats = pd.read_csv(utr_stats_filepath)

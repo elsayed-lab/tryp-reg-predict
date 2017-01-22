@@ -13,11 +13,11 @@ workdir: config['output_dir']
 # get co-expression module names
 df = pd.read_table(config['module_assignments'])
 
+# exclude unassigned (grey) genes
+df = df[df.color != 'grey']
+
 # get a list of the co-expression modules
 MODULES = list(df.color.unique())
-
-# exclude unassigned (grey) genes
-MODULES.remove('grey')
 
 # EXTREME runs
 EXTREME_RUNS = config['extreme_settings'].keys()
