@@ -42,8 +42,9 @@ Scans co-expression clusters for presence of motifs detected using EXTREME
 """
 rule count_motifs_extreme:
     input:
-        expand("build/motifs/extreme/{run}/{utr}/{module}/{module}.finished",
-               utr=['5utr', '3utr'], run=EXTREME_RUNS, module=MODULES)
+        expand("build/motifs/extreme/{run}/{feature}/{module}/{module}.finished",
+               feature=['5utr', '3utr', 'cds', 'downstream_intergenic_region'], 
+               run=EXTREME_RUNS, module=MODULES)
     output:
         "build/motifs/extreme-motif-counts.csv"
     script:
@@ -101,19 +102,28 @@ rule compute_cai:
         "scripts/compute_cai.py"
 
 """
-Generates FASTA files for all 5' and 3'UTRs
+Generates FASTA files for all 5' and 3' UTRs, intergenic regions, and CDS's
 """
 rule get_module_utr_sequences:
     input:
         module_assignments=config['module_assignments']
     output:
-        "build/sequences/{utr}/{module}.fa",
-        "build/sequences/{utr}/negative/{module}.fa"
+        "build/sequences/{feature}/{module}.fa",
+        "build/sequences/{feature}/negative/{module}.fa"
     params:
-        utr='{utr}',
-        build_dir='build/sequences/{utr}'
+        feature='{feature}',
+        build_dir='build/sequences/{feature}'
     script:
         "scripts/get_module_utr_sequences.py"
+
+"""
+Generates table containing sequences and basic stats for CDS's
+"""
+rule generate_cds_stats:
+    output:
+        "build/extra/cds_stats.csv"
+    script:
+        "scripts/generate_cds_stats.py"
 
 """
 Performs RNA motif detection using CMFinder
