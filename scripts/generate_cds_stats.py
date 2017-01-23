@@ -14,7 +14,7 @@ infile = snakemake.config['input_cds_fasta']
 
 # open file to store results in
 fp = open(snakemake.output[0], 'w')
-fp.write('gene_id,cds_length,cds_gc,cds_ct,cds_seq')
+fp.write('gene,length,gc,ct,seq')
 
 # parse CDS FASTA entries
 for seq in SeqIO.parse(infile, format="fasta"):

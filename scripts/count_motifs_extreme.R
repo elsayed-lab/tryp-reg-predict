@@ -5,7 +5,8 @@
 # keith hughitt (khughitt@umd.edu)
 #
 # Loads detected motifs and creates a utr-motif matrix quantifying the
-# presence of motifs for each 5' and 5'UTR.
+# presence of motifs for each gene feature: 5' UTR, 3' UTR, CDS, and integenic
+# region.
 #
 ###############################################################################
 library('Biostrings')

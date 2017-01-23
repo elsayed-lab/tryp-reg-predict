@@ -43,7 +43,8 @@ Scans co-expression clusters for presence of motifs detected using EXTREME
 rule count_motifs_extreme:
     input:
         expand("build/motifs/extreme/{run}/{feature}/{module}/{module}.finished",
-               feature=['5utr', '3utr', 'cds', 'downstream_intergenic_region'], 
+               feature=['5utr', '3utr', 'cds', 'downstream_intergenic_region',
+                        'upstream_intergenic_region'], 
                run=EXTREME_RUNS, module=MODULES)
     output:
         "build/motifs/extreme-motif-counts.csv"
@@ -55,8 +56,10 @@ Combines motif search output from cmsearch into a single table
 """
 rule combine_cmsearch_results:
     input: 
-        expand("build/motifs/cmfinder/{utr}/{module}/{module}.cmsearch.gz",
-               utr=['5utr', '3utr'], module=MODULES)
+        expand("build/motifs/cmfinder/{feature}/{module}/{module}.cmsearch.gz",
+               feature=['5utr', '3utr', 'cds', 'downstream_intergenic_region',
+                        'upstream_intergenic_region'], 
+               module=MODULES)
     output:
         "build/motifs/cmfinder-motif-counts.csv",
     script:
@@ -67,9 +70,9 @@ Scans co-expression clusters for presence of motifs detected using CMFinder
 """
 rule count_motifs_cmfinder:
     input:
-        "build/motifs/cmfinder/{utr}/{module}/{module}.finished"
+        "build/motifs/cmfinder/{feature}/{module}/{module}.finished"
     output:
-        "build/motifs/cmfinder/{utr}/{module}/{module}.cmsearch.gz"
+        "build/motifs/cmfinder/{feature}/{module}/{module}.cmsearch.gz"
     shell:
         """
         # full path to output file
@@ -77,14 +80,14 @@ rule count_motifs_cmfinder:
 
         cd $(dirname {input})
 
-        # for each detected motif, iterate over all UTR sequences and count the
-        # occurences of that motif
+        # for each detected motif, iterate over all feature sequences and count
+        # the occurences of that motif
         for motif in *.cm; do
-            for utr_seqs in {config[output_dir]}/build/sequences/*/*.fa; do
+            for feature_seqs in {config[output_dir]}/build/sequences/*/*.fa; do
                 cmsearch --noali \
                          -E {config[cmfinder_settings][evalue_cutoff]} \
                          ${{motif}} \
-                         ${{utr_seqs}} >> ${{outfile/.gz//}}
+                         ${{feature_seqs}} >> ${{outfile/.gz//}}
             done
         done
 
@@ -102,21 +105,6 @@ rule compute_cai:
         "scripts/compute_cai.py"
 
 """
-Generates FASTA files for all 5' and 3' UTRs, intergenic regions, and CDS's
-"""
-rule get_module_utr_sequences:
-    input:
-        module_assignments=config['module_assignments']
-    output:
-        "build/sequences/{feature}/{module}.fa",
-        "build/sequences/{feature}/negative/{module}.fa"
-    params:
-        feature='{feature}',
-        build_dir='build/sequences/{feature}'
-    script:
-        "scripts/get_module_utr_sequences.py"
-
-"""
 Generates table containing sequences and basic stats for CDS's
 """
 rule generate_cds_stats:
@@ -125,24 +113,61 @@ rule generate_cds_stats:
     script:
         "scripts/generate_cds_stats.py"
 
+rule generate_intergenic_stats:
+    output:
+        downstream="build/extra/downstream_intergenic_stats.csv",
+        upstream="build/extra/upstream_intergenic_stats.csv"
+    run:
+        df = pd.read_csv(config['intergenic_stats'])
+
+        # upstream intergenic regions
+        df['gene'] = df['left_gene'].where(df['strand'] == 1, df['right_gene'])
+        upstream = df[['gene', 'inter_cds_length', 'intergenic_length', 'gc',
+                       'ct', 'seq']]
+        upstream.to_csv(output.upstream, index=False)
+
+        # downstream intergenic regions
+        df['gene'] = df['right_gene'].where(df['strand'] == 1, df['left_gene'])
+        downstream = df[['gene', 'inter_cds_length', 'intergenic_length',
+                         'gc', 'ct', 'seq']]
+        downstream.to_csv(output.downstream, index=False)
+
+"""
+Generates FASTA files for all 5' and 3' UTRs, intergenic regions, and CDS's
+"""
+rule get_coexpression_module_feature_sequences:
+    input:
+        cds=rules.generate_cds_stats.output[0],
+        downstream_intergenic_region=rules.generate_intergenic_stats.output.downstream,
+        upstream_intergenic_region=rules.generate_intergenic_stats.output.upstream
+    output:
+        "build/sequences/{feature}/{module}.fa",
+        "build/sequences/{feature}/negative/{module}.fa"
+    params:
+        feature='{feature}',
+        build_dir='build/sequences/{feature}'
+    script:
+        "scripts/get_module_feature_sequences.py"
+
+
 """
 Performs RNA motif detection using CMFinder
 """
-rule detect_utr_motifs_cmfinder:
+rule detect_feature_motifs_cmfinder:
     input:
-        utr_seqs="build/sequences/{utr}/{module}.fa"
+        feature_seqs="build/sequences/{feature}/{module}.fa"
     output:
-        "build/motifs/cmfinder/{utr}/{module}/{module}.finished"
+        "build/motifs/cmfinder/{feature}/{module}/{module}.finished"
     shell:
         """
-        # create output directory and copy cluster utr sequences
+        # create output directory and copy cluster feature sequences
         cd $(dirname {output})
-        cp {config[output_dir]}/{input.utr_seqs} .
+        cp {config[output_dir]}/{input.feature_seqs} .
 
         # run cmfinder
         cmfinder.pl -f {config[cmfinder_settings][motif_fraction]} \
                     -m {config[cmfinder_settings][min_length]} \
-                    -b $(basename {input.utr_seqs})
+                    -b $(basename {input.feature_seqs})
 
         # rebuilt and calibrate the motif covariance models using infernal
         if ls *.motif.* 1>/dev/null 2>&1; then
@@ -161,12 +186,12 @@ rule detect_utr_motifs_cmfinder:
 Performs RNA motif detection using EXTREME
 http://www.ncbi.nlm.nih.gov/pubmed/24532725
 """
-rule detect_utr_motifs_extreme:
+rule detect_feature_motifs_extreme:
     input:
-        utr_seqs="build/sequences/{utr}/{module}.fa",
-        utr_neg_seqs="build/sequences/{utr}/negative/{module}.fa"
+        feature_seqs="build/sequences/{feature}/{module}.fa",
+        feature_neg_seqs="build/sequences/{feature}/negative/{module}.fa"
     output:
-        "build/motifs/extreme/{run}/{utr}/{module}/{module}.finished"
+        "build/motifs/extreme/{run}/{feature}/{module}/{module}.finished"
     params:
         half_length=lambda wildcards: config['extreme_settings'][wildcards.run]['half_length'],
         ming=lambda wildcards: config['extreme_settings'][wildcards.run]['min_gap_size'],
@@ -183,8 +208,8 @@ rule detect_utr_motifs_extreme:
             -ming {params.ming} \
             -maxg {params.maxg} \
             -minsites {params.min_sites} \
-            {config[output_dir]}/{input.utr_seqs} \
-            {config[output_dir]}/{input.utr_neg_seqs} \
+            {config[output_dir]}/{input.feature_seqs} \
+            {config[output_dir]}/{input.feature_neg_seqs} \
             {wildcards.module}.words
 
         perl {config[extreme_dir]}/src/run_consensus_clusering_using_wm.pl \
@@ -198,8 +223,8 @@ rule detect_utr_motifs_extreme:
         for i in `seq 1 {params.max_motif_seeds}`; do
             if [[ -n $(grep ">cluster$i\s" {wildcards.module}.wm) ]]; then
                 python2 {config[extreme_dir]}/src/EXTREME.py \
-                    {config[output_dir]}/{input.utr_seqs} \
-                    {config[output_dir]}/{input.utr_neg_seqs} \
+                    {config[output_dir]}/{input.feature_seqs} \
+                    {config[output_dir]}/{input.feature_neg_seqs} \
                     --saveseqs \
                     {wildcards.module}.wm \
                     $i

@@ -1,6 +1,33 @@
 Prediction of Trypanosomatid Regulatory Elements
 ================================================
 
+Overview
+--------
+
+### Features
+
+- Sequence motifs
+    - [X] 5' UTR
+    - [X] 3' UTR
+    - [ ] Upstream gene's 3' UTR
+    - [ ] Downstream genes 5' UTR
+    - [X] Upstream intergenic region
+    - [X] Downstream intergenic region
+    - [X] CDS
+- Sequence composition
+    - [X] 5' UTR GC/CT composition
+    - [X] 3' UTR GC/CT composition
+    - [X] CDS GC/CT composition
+    - [X] Polypyrimidine tract GC/CT composition
+    - [ ] Kmer counts
+- Sequence lengths
+    - [X] 5' UTR length
+    - [X] 3' UTR length
+    - [X] Polypyrimidine tract length
+    - [X] Interenic region / inter-CDS length
+- Other
+    - [X] CDS codon adaptation index (CAI)
+
 Installation
 ------------
 
@@ -32,6 +59,8 @@ Below is a list of all of the requirements needed to run this pipeline.
 
 Usage
 -----
+
+TODO: describe software for predicting UTR boundaries, etc.
 
 ```sh
 snakemake --configfile settings/config.yml combine_motifs

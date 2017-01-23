@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
+compute_cai.py
+keith hughitt (khughitt@umd.edu)
+
 Snakemake script for computing the codon adaptation index (CAI) for a set of
 sequences.
 """
