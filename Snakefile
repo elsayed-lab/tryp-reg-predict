@@ -135,12 +135,14 @@ rule detect_utr_motifs_cmfinder:
                     -b $(basename {input.utr_seqs})
 
         # rebuilt and calibrate the motif covariance models using infernal
-        for motif in *.motif.*; do
-            cmbuild ${{motif}}.cm ${{motif}}
-            cmcalibrate ${{motif}}.cm
-        done
+        if ls *.motif.* 1>/dev/null 2>&1; then
+            for motif in *.motif.*; do
+                cmbuild ${{motif}}.cm ${{motif}}
+                cmcalibrate ${{motif}}.cm
+            done
 
-        rm latest.cm
+            rm -f latest.cm
+        fi
 
         touch {wildcards.module}.finished
         """
