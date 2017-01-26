@@ -19,23 +19,11 @@ df = df[df.color != 'grey']
 # get a list of the co-expression modules
 MODULES = list(df.color.unique())
 
+# TESTING
+MODULES = MODULES[:5]
+
 # EXTREME runs
 EXTREME_RUNS = config['extreme_settings'].keys()
-
-#
-# snakemake directives
-#
-rule create_training_set:
-    input:
-        utr5="build/motifs/extreme/5utr-filtered.csv",
-        utr3="build/motifs/extreme/3utr-filtered.csv"
-    output:
-        "build/model/training_set.csv"
-    shell:
-        "touch {output}"
-    # script:
-    #     "scripts/create_training_set.py"
-
 
 """
 Scans co-expression clusters for presence of motifs detected using EXTREME
@@ -47,7 +35,9 @@ rule count_motifs_extreme:
                         'upstream_intergenic_region'], 
                run=EXTREME_RUNS, module=MODULES)
     output:
-        "build/motifs/extreme-motif-counts.csv"
+        "build/features/extreme-motif-counts.csv"
+    params:
+        build_dir='build/motifs'
     script:
         "scripts/count_motifs_extreme.R"
 
@@ -61,7 +51,7 @@ rule combine_cmsearch_results:
                         'upstream_intergenic_region'], 
                module=MODULES)
     output:
-        "build/motifs/cmfinder-motif-counts.csv",
+        "build/features/cmfinder-motif-counts.csv",
     script:
         "scripts/combine_cmsearch_results.py"
 
@@ -87,12 +77,14 @@ rule count_motifs_cmfinder:
                 cmsearch --noali \
                          -E {config[cmfinder_settings][evalue_cutoff]} \
                          ${{motif}} \
-                         ${{feature_seqs}} >> ${{outfile/.gz//}}
+                         ${{feature_seqs}} >> ${{outfile/.gz/}}
             done
         done
 
         # compress results
-        gzip ${{outfile}}
+        if [[ -e ${{outfile/.gz/}} ]]; then
+            gzip ${{outfile/.gz/}}
+        fi
         """
 
 """
@@ -100,7 +92,7 @@ Compute Codon Adaptation Index for each CDS in the genome.
 """
 rule compute_cai:
     output:
-        "build/cai.csv"
+        "build/features/cai.csv"
     script:
         "scripts/compute_cai.py"
 
@@ -109,15 +101,16 @@ Generates table containing sequences and basic stats for CDS's
 """
 rule generate_cds_stats:
     output:
-        "build/extra/cds_stats.csv"
+        "build/features/cds_stats.csv"
     script:
         "scripts/generate_cds_stats.py"
 
 rule generate_intergenic_stats:
     output:
-        downstream="build/extra/downstream_intergenic_stats.csv",
-        upstream="build/extra/upstream_intergenic_stats.csv"
+        downstream="build/features/downstream_intergenic_stats.csv",
+        upstream="build/features/upstream_intergenic_stats.csv"
     run:
+        # load intergenic stats
         df = pd.read_csv(config['intergenic_stats'])
 
         # upstream intergenic regions
@@ -233,5 +226,23 @@ rule detect_feature_motifs_extreme:
 
         touch {wildcards.module}.finished
         """
+
+#
+# snakemake directives
+#
+rule create_training_set:
+    input:
+        extreme=rules.count_motifs_extreme.output[0],
+        cmfinder=rules.combine_cmsearch_results.output[0],
+        cai=rules.compute_cai.output[0],
+        cds=rules.generate_cds_stats.output[0],
+        downstream_intergenic_region=rules.generate_intergenic_stats.output.downstream,
+        upstream_intergenic_region=rules.generate_intergenic_stats.output.upstream
+    output:
+        "build/model/training_set.csv"
+    shell:
+        "touch {output}"
+    # script:
+    #     "scripts/create_training_set.R"
 
 # vim: ft=python
