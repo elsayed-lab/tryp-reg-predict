@@ -11,6 +11,7 @@
 ###############################################################################
 library('Biostrings')
 library('seqLogo')
+library('tibble')
 options(stringsAsFactors=FALSE)
 
 ###############################################################################
@@ -172,7 +173,8 @@ if (length(utr3_missing) > 0) {
 # combine results and save output
 results <- merge(utr5_counts, utr3_counts, by='row.names')
 rownames(results) <- results$Row.names
-results <- results[,!colnames(results) == 'Row.names']
+results <- results[,!colnames(results) == 'Row.names'] %>% 
+    rownames_to_column('gene')
 
-write.csv(results, file=snakemake@output[[1]])
+write.csv(results, file=snakemake@output[[1]], row.names=FALSE)
 

@@ -35,7 +35,7 @@ rule count_motifs_extreme:
                         'upstream_intergenic_region'], 
                run=EXTREME_RUNS, module=MODULES)
     output:
-        "build/features/extreme-motif-counts.csv"
+        "build/features/motif_counts_extreme.csv"
     params:
         build_dir='build/motifs'
     script:
@@ -51,9 +51,27 @@ rule combine_cmsearch_results:
                         'upstream_intergenic_region'], 
                module=MODULES)
     output:
-        "build/features/cmfinder-motif-counts.csv",
+        "build/features/motif_counts_cmfinder.csv",
     script:
         "scripts/combine_cmsearch_results.py"
+
+rule copy_input_features:
+    input:
+        config['polypyrimidine_stats'],
+        config['5utr_stats'],
+        config['3utr_stats']
+    output:
+        'build/features/polypyrimidine_tracts.csv',
+        'build/features/5utr_stats.csv',
+        'build/features/3utr_stats.csv'
+    shell:
+        """
+        for x in {input}; do
+            outfile=$(basename $x)
+            echo "cp $x build/features/$outfile"
+            cp $x build/features/$outfile
+        done
+        """
 
 """
 Scans co-expression clusters for presence of motifs detected using CMFinder
@@ -72,19 +90,24 @@ rule count_motifs_cmfinder:
 
         # for each detected motif, iterate over all feature sequences and count
         # the occurences of that motif
-        for motif in *.cm; do
-            for feature_seqs in {config[output_dir]}/build/sequences/*/*.fa; do
-                cmsearch --noali \
-                         -E {config[cmfinder_settings][evalue_cutoff]} \
-                         ${{motif}} \
-                         ${{feature_seqs}} >> ${{outfile/.gz/}}
+        if ls *.cm 1>/dev/null 2>&1; then
+            for motif in *.cm; do
+                for feature_seqs in {config[output_dir]}/build/sequences/*/*.fa; do
+                    cmsearch --noali \
+                            -E {config[cmfinder_settings][evalue_cutoff]} \
+                            ${{motif}} \
+                            ${{feature_seqs}} >> ${{outfile/.gz/}}
+                done
             done
-        done
 
-        # compress results
-        if [[ -e ${{outfile/.gz/}} ]]; then
+            # compress results
             gzip ${{outfile/.gz/}}
+        else
+            # if no motifs were detected, create a dummy output file to satisfy
+            # snakemake
+            touch ${{outfile}}
         fi
+
         """
 
 """
@@ -92,7 +115,7 @@ Compute Codon Adaptation Index for each CDS in the genome.
 """
 rule compute_cai:
     output:
-        "build/features/cai.csv"
+        "build/features/gene_features_cai.csv"
     script:
         "scripts/compute_cai.py"
 
@@ -101,14 +124,17 @@ Generates table containing sequences and basic stats for CDS's
 """
 rule generate_cds_stats:
     output:
-        "build/features/cds_stats.csv"
+        "build/features/gene_stats_cds.csv"
     script:
         "scripts/generate_cds_stats.py"
 
+"""
+Compute upstream and downstream intergenic region statistics for each gene
+"""
 rule generate_intergenic_stats:
     output:
-        downstream="build/features/downstream_intergenic_stats.csv",
-        upstream="build/features/upstream_intergenic_stats.csv"
+        downstream="build/features/gene_stats_downstream_intergenic_region.csv",
+        upstream="build/features/gene_stats_upstream_intergenic_region.csv"
     run:
         # load intergenic stats
         df = pd.read_csv(config['intergenic_stats'])
@@ -126,6 +152,31 @@ rule generate_intergenic_stats:
         downstream.to_csv(output.downstream, index=False)
 
 """
+Determine upstream and downstream neighbors for each gene.
+"""
+rule determine_neighboring_genes:
+    output:
+        'build/features/gene_neighbors.csv'
+    run:
+        # load intergenic stats
+        df = pd.read_csv(config['intergenic_stats'])
+
+        # upstream genes for each gene
+        upstream_df = pd.concat({
+            'gene':          df['right_gene'].where(df['strand'] == 1, df['left_gene']),
+            'upstream_gene': df['left_gene'].where(df['strand'] == 1, df['right_gene'])
+        }, axis=1)
+
+        # downstream genes for each gene
+        downstream_df = pd.concat({
+            'gene':          df['left_gene'].where(df['strand'] == 1, df['right_gene']),
+            'downstream_gene': df['right_gene'].where(df['strand'] == 1, df['left_gene'])
+        }, axis=1)
+
+        result = pd.merge(upstream_df, downstream_df, on='gene', how='outer')
+        result.to_csv(output[0])
+
+"""
 Generates FASTA files for all 5' and 3' UTRs, intergenic regions, and CDS's
 """
 rule get_coexpression_module_feature_sequences:
@@ -141,7 +192,6 @@ rule get_coexpression_module_feature_sequences:
         build_dir='build/sequences/{feature}'
     script:
         "scripts/get_module_feature_sequences.py"
-
 
 """
 Performs RNA motif detection using CMFinder
@@ -237,7 +287,8 @@ rule create_training_set:
         cai=rules.compute_cai.output[0],
         cds=rules.generate_cds_stats.output[0],
         downstream_intergenic_region=rules.generate_intergenic_stats.output.downstream,
-        upstream_intergenic_region=rules.generate_intergenic_stats.output.upstream
+        upstream_intergenic_region=rules.generate_intergenic_stats.output.upstream,
+        neighbors=rules.determine_neighboring_genes.output[0]
     output:
         "build/model/training_set.csv"
     shell:

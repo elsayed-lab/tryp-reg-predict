@@ -19,7 +19,7 @@ cai = CodonAdaptationIndex()
 cai.generate_index(infile)
 
 # open file to store results in
-fp = open('build/cai.csv', 'w')
+fp = open(snakemake.output[0], 'w')
 fp.write('gene_id,cai')
 
 # compute CAI for each CDS

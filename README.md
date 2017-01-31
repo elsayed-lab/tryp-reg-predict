@@ -55,6 +55,7 @@ Below is a list of all of the requirements needed to run this pipeline.
 - [Bioconductor](https://bioconductor.org) (3.3+)
 - [Biostrings](https://bioconductor.org/packages/release/bioc/html/Biostrings.html) (2.40.0+)
 - [caret](http://topepo.github.io/caret/index.html) (6.0-73+)
+- [tibble](https://cran.r-project.org/web/packages/tibble/index.html) (1.2+)
 - [seqLogo](https://www.bioconductor.org/packages/release/bioc/html/seqLogo.html) (1.38+)
 
 Usage

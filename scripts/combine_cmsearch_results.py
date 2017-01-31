@@ -27,7 +27,7 @@ def main():
             result = pd.concat([result, df], axis=1)
 
     # save results
-    result.fillna(0).to_csv(snakemake.output[0])
+    result.fillna(0).to_csv(snakemake.output[0], index_label='gene')
 
 def parse_cmsearch_results(filepath):
     """Parses file containing one or more cmsearch run results"""
