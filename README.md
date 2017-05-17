@@ -49,6 +49,7 @@ Below is a list of all of the requirements needed to run this pipeline.
 - [Snakemake](https://snakemake.readthedocs.io/en/latest/) (3.10.0+)
 - [Biopython](http://biopython.org/wiki/Biopython) (1.6.8+)
 - [Pandas](http://pandas.pydata.org/) (0.19.2+)
+- [PyYAML](http://pyyaml.org/)(3.12+)
 
 #### R requirements
 

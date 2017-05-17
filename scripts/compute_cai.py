@@ -20,11 +20,12 @@ cai.generate_index(infile)
 
 # open file to store results in
 fp = open(snakemake.output[0], 'w')
-fp.write('gene_id,cai')
+fp.write('gene,cai')
 
 # compute CAI for each CDS
 for seq in SeqIO.parse(infile, format="fasta"):
-   gene_cai = cai.cai_for_gene(str(seq.seq))
-   fp.write('\n%s,%f' % (seq.id, gene_cai))
+    seq_id = seq.id.split(':')[0]
+    gene_cai = cai.cai_for_gene(str(seq.seq))
+    fp.write('\n%s,%f' % (seq_id, gene_cai))
 
 fp.close()

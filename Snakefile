@@ -153,6 +153,8 @@ rule generate_intergenic_stats:
 
 """
 Determine upstream and downstream neighbors for each gene.
+
+NOTE: no longer needed: R used directly instead.
 """
 rule determine_neighboring_genes:
     output:
@@ -287,13 +289,10 @@ rule create_training_set:
         cai=rules.compute_cai.output[0],
         cds=rules.generate_cds_stats.output[0],
         downstream_intergenic_region=rules.generate_intergenic_stats.output.downstream,
-        upstream_intergenic_region=rules.generate_intergenic_stats.output.upstream,
-        neighbors=rules.determine_neighboring_genes.output[0]
+        upstream_intergenic_region=rules.generate_intergenic_stats.output.upstream
     output:
         "build/model/training_set.csv"
-    shell:
-        "touch {output}"
-    # script:
-    #     "scripts/create_training_set.R"
+    script:
+        "scripts/create_training_set.R"
 
 # vim: ft=python
