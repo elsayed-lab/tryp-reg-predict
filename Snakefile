@@ -196,6 +196,46 @@ rule get_coexpression_module_feature_sequences:
         "scripts/get_module_feature_sequences.py"
 
 """
+Splits up module-wide multifasta sequence files into separate FASTA files for
+each gene. This is useful for counting k-mers at the gene level using jellyfish
+"""
+rule split_multifasta_files:
+    input:
+        # rules.get_coexpression_module_feature_sequences.output[0]
+        expand("build/sequences/{feature}/{module}.fa",
+               feature=['5utr', '3utr', 'cds', 
+                       'downstream_intergenic_region',
+                       'upstream_intergenic_region'], 
+               module=MODULES)
+    output:
+        dynamic("build/sequences/genes/{gene}.fa")
+    shell:
+        """
+        for input_file in {input}; do
+            for x in `grep '^>' ${{input_file}} | cut -c2-`; do
+                outfile="build/sequences/genes/${{x}}.fa"
+                awk -v seq="${{x}}" -v RS='>' '$1 == seq {{print RS $0}}' ${{input_file}} > ${{outfile}}
+            done
+        done
+        """
+
+rule count_kmers:
+    input:
+        # "build/sequences/genes/{gene}.fa"
+        rules.split_multifasta_files.output
+    output:
+        "build/kmers/{gene}.txt"
+    shell:
+        """
+        jellyfish count -m4 -s256 -t4 -o {output}.jf {input}
+        jellyfish dump -c {output}.jf > {output}
+        """
+
+rule test_kmer_counts:
+    input: 
+        dynamic("build/kmers/{gene}.txt")
+
+"""
 Performs RNA motif detection using CMFinder
 """
 rule detect_feature_motifs_cmfinder:

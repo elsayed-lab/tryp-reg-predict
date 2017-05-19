@@ -13,6 +13,8 @@ library('caret')
 library('dplyr')
 library('rtracklayer')
 
+options(stringsAsFactors=FALSE)
+
 feature_dir <- '/cbcb/nelsayed-scratch/keith/reg-predict/tcruzi/build/features'
 
 inputs <- list(
@@ -64,6 +66,18 @@ inputs[['downstream_intergenic_region']] <- inputs[['downstream_intergenic_regio
 # load gene annotations
 gff <- import.gff3('/cbcb/lab/nelsayed/ref_data/tcruzi_clbrener_esmeraldo-like/annotation/TriTrypDB-32_TcruziCLBrenerEsmeraldo-like.gff')
 genes <- gff[gff$type == 'gene']
+
+# add zero entries to cmfinder results for genes with no motif matches
+# (otherwise they will becomes NA's later on)
+cmfinder_missing <- inputs[['cds']]$gene[!inputs[['cds']]$gene %in% 
+                                         inputs[['cmfinder']]$gene]
+print(sprintf("ADDING %d missing cmfinder entries", length(cmfinder_missing)))
+cmfinder_placeholders <- data.frame(
+    gene=cmfinder_missing, 
+    matrix(0, length(cmfinder_missing), ncol(inputs[['cmfinder']]) - 1)
+)
+colnames(cmfinder_placeholders) <- colnames(inputs[['cmfinder']])
+inputs[['cmfinder']] <- rbind(inputs[['cmfinder']], cmfinder_placeholders)
 
 # Combine input training variable sources, including genes with missing data
 dat <- Reduce(function(...) merge(..., by='gene', all=TRUE), inputs)

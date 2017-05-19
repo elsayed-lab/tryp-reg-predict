@@ -9,8 +9,8 @@ Overview
 - Sequence motifs
     - [X] 5' UTR
     - [X] 3' UTR
-    - [ ] Upstream gene's 3' UTR
-    - [ ] Downstream genes 5' UTR
+    - [X] Upstream gene's 3' UTR
+    - [X] Downstream genes 5' UTR
     - [X] Upstream intergenic region
     - [X] Downstream intergenic region
     - [X] CDS
