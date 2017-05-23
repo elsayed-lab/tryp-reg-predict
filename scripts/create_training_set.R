@@ -34,14 +34,16 @@ inputs <- list(
 #    cai=file.path(feature_dir, 'gene_features_cai.csv'),
 #    cds=file.path(feature_dir, 'gene_stats_cds.csv'),
 #    downstream_intergenic_region=file.path(feature_dir, 'gene_stats_upstream_intergenic_region.csv'),
-#    upstream_intergenic_region=file.path(feature_dir, 'gene_stats_downstream_intergenic_region.csv')
+#    upstream_intergenic_region=file.path(feature_dir, 'gene_stats_downstream_intergenic_region.csv'),
+#    kmers=file.path(feature_dir, 'kmer_counts.csv')
 #)
 
 # retrieve snakemake input files using named keys; the snakemake@input list
 # includes each values twice; once with a numeric key and once using a 
 # string key, if specified.
 input_keys <- c('extreme', 'cmfinder', 'cai', 'cds',
-                'downstream_intergenic_region', 'upstream_intergenic_region')
+                'downstream_intergenic_region', 'upstream_intergenic_region',
+                'kmers')
 
 snakemake_input <- list()
 for (x in input_keys) {

@@ -20,7 +20,7 @@ df = df[df.color != 'grey']
 MODULES = list(df.color.unique())
 
 # TESTING
-MODULES = MODULES[:5]
+# MODULES = MODULES[:2]
 
 # EXTREME runs
 EXTREME_RUNS = config['extreme_settings'].keys()
@@ -198,6 +198,10 @@ rule get_coexpression_module_feature_sequences:
 """
 Splits up module-wide multifasta sequence files into separate FASTA files for
 each gene. This is useful for counting k-mers at the gene level using jellyfish
+
+TODO 2017/05/19 - if kmer generation still doesn't work, try using dummy
+"FINISHED" files in place of the dynamic() functionality? (similar to cmfinder
+which generates a dynamic number of outputs..)
 """
 rule split_multifasta_files:
     input:
@@ -208,32 +212,57 @@ rule split_multifasta_files:
                        'upstream_intergenic_region'], 
                module=MODULES)
     output:
-        dynamic("build/sequences/genes/{gene}.fa")
+        # dynamic("build/sequences/{feature}/genes/{gene}.fa")
+        "build/sequences/{feature}/genes/finished"
     shell:
         """
         for input_file in {input}; do
             for x in `grep '^>' ${{input_file}} | cut -c2-`; do
-                outfile="build/sequences/genes/${{x}}.fa"
+                outfile="build/sequences/{wildcards.feature}/genes/${{x}}.fa"
                 awk -v seq="${{x}}" -v RS='>' '$1 == seq {{print RS $0}}' ${{input_file}} > ${{outfile}}
             done
         done
+
+        touch {output}
         """
 
 rule count_kmers:
     input:
-        # "build/sequences/genes/{gene}.fa"
-        rules.split_multifasta_files.output
+        "build/sequences/{feature}/genes/finished"
     output:
-        "build/kmers/{gene}.txt"
+        "build/kmers/{feature}/{kmer_size}/finished"
     shell:
         """
-        jellyfish count -m4 -s256 -t4 -o {output}.jf {input}
-        jellyfish dump -c {output}.jf > {output}
+        indir=`dirname {input}`
+        outdir=`dirname {output}`
+
+        for gene_fasta in ${{indir}}/*.fa; do
+            # intermediate and output filepaths
+            file_prefix=`basename ${{gene_fasta/.fa/}}`
+            jf_counts=${{outdir}}/${{file_prefix}}.jf
+
+            # count kmers and save output to plaintext file
+            hash_size=`echo $((4 * {wildcards.kmer_size}))`
+            jellyfish count -m {wildcards.kmer_size} -s ${{hash_size}} -t3 -o ${{jf_counts}} ${{gene_fasta}}
+            jellyfish dump -c ${{jf_counts}} > ${{jf_counts/.jf/.txt}}
+
+            # delete intermediate file
+            rm ${{jf_counts}}
+        done
+
+        touch {output}
         """
 
-rule test_kmer_counts:
-    input: 
-        dynamic("build/kmers/{gene}.txt")
+rule combine_kmer_counts:
+    input:
+        expand("build/kmers/{feature}/{kmer_size}/finished", 
+                feature=['5utr', '3utr', 'cds', 'downstream_intergenic_region',
+                    'upstream_intergenic_region'],
+                kmer_size=['3', '4', '5'])
+    output:
+        "build/features/kmer_counts.csv"
+    script:
+        "scripts/combine_kmer_counts.py"
 
 """
 Performs RNA motif detection using CMFinder
@@ -329,7 +358,8 @@ rule create_training_set:
         cai=rules.compute_cai.output[0],
         cds=rules.generate_cds_stats.output[0],
         downstream_intergenic_region=rules.generate_intergenic_stats.output.downstream,
-        upstream_intergenic_region=rules.generate_intergenic_stats.output.upstream
+        upstream_intergenic_region=rules.generate_intergenic_stats.output.upstream,
+        kmers=rules.combine_kmer_counts.output[0]
     output:
         "build/model/training_set.csv"
     script:

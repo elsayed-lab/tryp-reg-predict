@@ -11,7 +11,9 @@
 ###############################################################################
 library('Biostrings')
 library('seqLogo')
+library('dplyr')
 library('tibble')
+
 options(stringsAsFactors=FALSE)
 
 ###############################################################################
