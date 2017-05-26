@@ -81,6 +81,33 @@ cmfinder_placeholders <- data.frame(
 colnames(cmfinder_placeholders) <- colnames(inputs[['cmfinder']])
 inputs[['cmfinder']] <- rbind(inputs[['cmfinder']], cmfinder_placeholders)
 
+# remove redundant and non-informative features within each subset before
+# combining; this will speed up later checks on the full dataset
+for (feature in c('extreme', 'cmfinder', 'kmers')) {
+    # get feature matrix, excluding gene id
+    dat_subset <- inputs[[feature]][,colnames(inputs[[feature]]) != 'gene']
+
+    # discard features with only a few non-zero entries
+    num_nonzeros <- apply(dat_subset, 2, function(x) { sum(x != 0, na.rm=TRUE) })
+    dat_subset <- dat_subset[,num_nonzeros > 1]
+
+    print(sprintf("Generating feature correlation matrix for %s", feature))
+    cor_mat <- cor(dat_subset, method='spearman', use='pairwise.complete.obs')
+
+    # Replace the few remaining NA's (much less than 1% of total values in testing)
+    # with 0's to allow the caret findCorrelation function to be used
+    cor_mat[is.na(cor_mat)] <- 0
+
+    # Use the caret findCorrelation function to find and remove highly correlated
+    # variables
+    redundant_ind <- findCorrelation(cor_mat, cutoff=0.75, verbose=FALSE)
+    print(sprintf("Removing %d/%d %s features which have high redundancy",
+                  length(redundant_ind), ncol(cor_mat), feature))
+
+    redundant_features <- colnames(cor_mat)[redundant_ind]
+    inputs[[feature]] <- inputs[[feature]][,!colnames(inputs[[feature]]) %in% redundant_features]
+}
+
 # Combine input training variable sources, including genes with missing data
 dat <- Reduce(function(...) merge(..., by='gene', all=TRUE), inputs)
 rownames(dat) <- dat$gene
@@ -88,13 +115,10 @@ dat <- dat %>% select(-gene)
 
 # Remove genes with a significant amount of missing feature data; often this
 # is due to large number of N's on either side of the CDS
-num_missing <- apply(dat, 1, function(x) { sum(is.na(x))})
-gene_mask <- num_missing < (0.1 * ncol(dat))
+num_missing <- apply(dat, 1, function(x) { sum(is.na(x)) })
+gene_mask <- num_missing < (0.25 * ncol(dat))
 print(sprintf("Removing %d/%d genes with many missing features", sum(!gene_mask), nrow(dat)))
 dat <- dat[gene_mask,]
-
-# QUESTION: do we only want to consider genes for which both UTR boundaries
-# could be determined?..
 
 # remove any features with many NA's; because UTR's could only be detected for
 # some genes, there are many NA's for UTR length, etc., however, we still want
@@ -102,12 +126,9 @@ dat <- dat[gene_mask,]
 #feature_mask <- apply(dat, 2, function (x) { sum(is.na(x)) < 100 })
 #print(sprintf("Removing %d/%d features with many missing values", sum(!feature_mask), ncol(dat)))
 
-# DEBUGGING
-#print("Features being removed:")
-#x <- apply(dat, 2, function(x) { sum(is.na(x)) })
-#print(names(x[x > 0]))
-
-#dat <- dat[,feature_mask]
+# remove features which are present for only a single gene
+feature_mask <- apply(dat, 2, function (x) { sum(x != 0, na.rm=TRUE) }) > 1
+dat <- dat[,feature_mask]
 
 # Load gene neighbor information and extend training set to include features
 # of upstream and downstream genes
@@ -159,25 +180,6 @@ for (i in 1:length(genes)) {
     }
 }
 
-# generate a feature correlation matrix
-print("Generating feature correlation matrix")
-cor_mat <- cor(dat, method='spearman', use='pairwise.complete.obs')
-
-# Replace the few remaining NA's (much less than 1% of total values in testing)
-# with 0's to allow the caret findCorrelation function to be used
-cor_mat[is.na(cor_mat)] <- 0
-
-# Use the caret findCorrelation function to find and remove highly correlated
-# variables
-redundant_features <- findCorrelation(cor_mat, cutoff=0.5, verbose=FALSE)
-print(sprintf("Removing %d/%d features which have high redundancy",
-              length(redundant_features), ncol(cor_mat)))
-
-dat <- dat[,-redundant_features]
-print(sprintf("Remaining features: %d", ncol(dat)))
-
+# save training set to disk
 write.csv(dat, file=snakemake@output[[1]])
-
-#cor_mat <- cor(dat, method='spearman')
-#cor_mat[is.na(cor_mat)] <- 0
 

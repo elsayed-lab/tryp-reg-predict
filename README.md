@@ -19,7 +19,7 @@ Overview
     - [X] 3' UTR GC/CT composition
     - [X] CDS GC/CT composition
     - [X] Polypyrimidine tract GC/CT composition
-    - [ ] Kmer counts
+    - [X] Kmer counts
 - Sequence lengths
     - [X] 5' UTR length
     - [X] 3' UTR length
