@@ -16,42 +16,52 @@ def main():
     # dataframe to store result in
     result = pd.DataFrame()
 
+    # TESTING
+    dat = pd.DataFrame()
+
     # iterate over features
     for filepath in snakemake.input:
-        input_dir = os.path.dirname(filepath)
+        # input_dir = os.path.dirname(filepath)
 
-        # feature name and k-mer size
-        base_dir, kmer_size = os.path.split(input_dir)
-        feature = os.path.split(base_dir)[-1]
+        # # feature name and k-mer size
+        # base_dir, kmer_size = os.path.split(input_dir)
+        # feature = os.path.split(base_dir)[-1]
         
-        # iterate over genes
-        input_files = glob.glob(os.path.join(input_dir, '*.txt'))
+        # # iterate over genes
+        # input_files = glob.glob(os.path.join(input_dir, '*.txt'))
 
         # intermediate dataframe
-        dat = pd.DataFrame()
+        # dat = pd.DataFrame()
 
-        print("Parsing kmer counts from %s" % input_dir)
+        # print("Parsing kmer counts from %s" % input_dir)
 
-        for infile in input_files:
+        # for infile in input_files:
             # skip empty files
-            if os.stat(infile).st_size == 0:
-                continue
 
-            # gene id
-            gene_id = os.path.splitext(os.path.basename(infile))[0]
+        # testing
+        infile = filepath
 
-            # load k-mers as a single column dataframe
-            kmers = pd.read_csv(infile, sep=' ', index_col=0, header=None)
+        if os.stat(infile).st_size == 0:
+            continue
 
-            # update row and column names
-            kmers.columns = [gene_id]
-            kmers.index = feature + '_' + kmers.index
+        # gene id
+        gene_id = os.path.splitext(os.path.basename(infile))[0]
 
-            # add column to result table
-            dat = dat.join(kmers, how='outer')
+        # load k-mers as a single column dataframe
+        kmers = pd.read_csv(infile, sep=' ', index_col=0, header=None)
+
+        # update row and column names
+        kmers.columns = [gene_id]
+        kmers.index = feature + '_' + kmers.index
+
+        # add column to result table
+        dat = dat.join(kmers, how='outer')
 
         # append to result dataframe
-        result = result.append(dat)
+        # result = result.append(dat)
+
+    # TESTING
+    result = dat
 
     # transpose matrix so that rows=genes and cols=features
     result = result.T

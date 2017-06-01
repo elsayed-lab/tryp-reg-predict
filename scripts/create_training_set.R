@@ -15,7 +15,8 @@ library('rtracklayer')
 
 options(stringsAsFactors=FALSE)
 
-feature_dir <- '/cbcb/nelsayed-scratch/keith/reg-predict/tcruzi/build/features'
+# TODO: generalize
+feature_dir <- '/cbcb/nelsayed-scratch/keith/reg-predict/tcruzi/2.0/build/features'
 
 inputs <- list(
     '5utr_stats'=read.csv(file.path(feature_dir, '5utr_stats.csv')) %>%
@@ -128,6 +129,7 @@ dat <- dat[gene_mask,]
 
 # remove features which are present for only a single gene
 feature_mask <- apply(dat, 2, function (x) { sum(x != 0, na.rm=TRUE) }) > 1
+print(sprintf("Removing %d/%d features with many missing values", sum(!feature_mask), ncol(dat)))
 dat <- dat[,feature_mask]
 
 # Load gene neighbor information and extend training set to include features

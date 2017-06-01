@@ -44,7 +44,8 @@ def parse_cmsearch_results(filepath):
     for line in fp:
         # motif
         if line.startswith('# query'):
-            motif = "%s:%s" % (filepath.replace('build/motifs/', ''),
+            # TODO: generalize
+            motif = "%s:%s" % (filepath.replace('build/2.0/motifs/', ''),
                                line.split().pop())
 
             if motif not in motifs:
