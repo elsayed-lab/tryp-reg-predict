@@ -14,13 +14,7 @@ import pandas as pd
 
 # load gene feature statistics and sequences
 feature = snakemake.params['feature']
-
-if feature in ['5utr', '3utr']:
-    # 5' and 3'UTR stats
-    features_filepath = snakemake.config[feature + '_stats']
-else:
-    # CDS, intergenic regions
-    features_filepath = snakemake.input[feature]
+features_filepath = snakemake.input[feature]
 
 features = pd.read_csv(features_filepath)
 
@@ -30,7 +24,7 @@ cluster_genes = list(cluster.gene)
 
 # For UTR's, if predicted UTR length is very short, use the "static" assumed
 # UTR length values instead (e.g. for T. cruzi, 75nt 5' UTR and 125nt 3' UTR)
-if snakemake.params['feature'] in ['5utr', '3utr']:
+if snakemake.params['feature'] in ['utr5', 'utr3']:
     short_utrs = features.static_seq.apply(len) > features.seq.apply(len)
 
     features.loc[short_utrs, 'seq'] = features[short_utrs].static_seq
@@ -41,10 +35,6 @@ if snakemake.params['feature'] in ['5utr', '3utr']:
 ratio_n = features.seq.str.count('N') / features.seq.apply(len)
 features = features[ratio_n < 0.5]
 
-# dataframe indices
-GENE_IDX = 1
-SEQ_IDX = 2
-
 # feature sequences for genes in module (positive)
 seqs = features[features.gene.isin(cluster_genes)][['gene', 'seq']]
 
@@ -52,8 +42,8 @@ seqs = features[features.gene.isin(cluster_genes)][['gene', 'seq']]
 with open(snakemake.output.positive, 'w') as cluster_outfile:
     for entry in seqs.itertuples():
         # append to cluster multi fasta
-        cluster_outfile.write('>%s\n' % entry[GENE_IDX])
-        cluster_outfile.write('%s\n' % entry[SEQ_IDX])
+        cluster_outfile.write('>%s\n' % entry.gene)
+        cluster_outfile.write('%s\n' % entry.seq)
 
 # feature sequences for genes not in module (negative)
 
@@ -68,6 +58,6 @@ seqs = features[features.gene.isin(negative_genes)][['gene', 'seq']]
 # save positive sequences to FASTA file
 with open(snakemake.output.negative, 'w') as fp:
     for entry in seqs.itertuples():
-        fp.write('>%s\n' % entry[GENE_IDX])
-        fp.write('%s\n' % entry[SEQ_IDX])
+        fp.write('>%s\n' % entry.gene)
+        fp.write('%s\n' % entry.seq)
 

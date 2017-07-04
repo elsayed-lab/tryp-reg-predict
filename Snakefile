@@ -10,21 +10,12 @@ import pandas as pd
 # specify build/output directory
 workdir: os.path.join(config['output_dir'], config['version'])
 
+# work-around for ambiguity
+ruleorder: get_gene_feature_sequences > get_coexpression_cluster_feature_sequences 
+
 # wildcard fills
 EXTREME_RUNS = config['extreme_settings'].keys()
-FEATURES = ['5utr', '3utr', 'cds', 'downstream_intergenic_region', 'upstream_intergenic_region']
-
-#############
-# Clustering
-#############
-"""
-Clusters genes based on their co-expression profiles
-"""
-rule generate_coexpression_clusters:
-    output:
-        dynamic("build/clusters/{cluster}.csv")
-    script:
-        "scripts/generate_coexpression_clusters.R"
+FEATURES = ['utr5', 'utr3', 'cds', 'downstream_intergenic_region', 'upstream_intergenic_region']
 
 ###############################
 # Gene structure & composition
@@ -92,6 +83,17 @@ rule compute_cai:
     script:
         "scripts/compute_cai.py"
 
+#############
+# Clustering
+#############
+"""
+Clusters genes based on their co-expression profiles
+"""
+rule generate_coexpression_clusters:
+    output:
+        dynamic("build/clusters/{cluster}.csv")
+    script:
+        "scripts/generate_coexpression_clusters.R"
 
 ############
 # Sequences
@@ -101,9 +103,11 @@ Generates cluster-level FASTA files for all 5' and 3' UTRs, intergenic regions, 
 """
 rule get_coexpression_cluster_feature_sequences:
     input:
-        cds=rules.generate_cds_stats.output[0],
-        downstream_intergenic_region=rules.generate_intergenic_stats.output.downstream,
-        upstream_intergenic_region=rules.generate_intergenic_stats.output.upstream,
+        utr5='build/features/5utr_stats.csv',
+        utr3='build/features/3utr_stats.csv',
+        cds="build/features/gene_stats_cds.csv",
+        downstream_intergenic_region="build/features/gene_stats_downstream_intergenic_region.csv",
+        upstream_intergenic_region="build/features/gene_stats_upstream_intergenic_region.csv",
         clusters="build/clusters/{cluster}.csv"
     output:
         positive="build/sequences/{feature}/{cluster}.fa",
@@ -119,11 +123,13 @@ Generates gene-level FASTA files for all 5' and 3' UTRs, intergenic regions, and
 """
 rule get_gene_feature_sequences:
     input:
-        cds=rules.generate_cds_stats.output[0],
-        downstream_intergenic_region=rules.generate_intergenic_stats.output.downstream,
-        upstream_intergenic_region=rules.generate_intergenic_stats.output.upstream
+        utr5='build/features/5utr_stats.csv',
+        utr3='build/features/3utr_stats.csv',
+        cds="build/features/gene_stats_cds.csv",
+        downstream_intergenic_region="build/features/gene_stats_downstream_intergenic_region.csv",
+        upstream_intergenic_region="build/features/gene_stats_upstream_intergenic_region.csv"
     output:
-        dynamic(expand("build/sequences/{feature}/genes/{{gene}}.fa", feature=FEATURES))
+        dynamic("build/sequences/{feature}/genes/{gene}.fa")
     params:
         feature='{feature}'
     script:

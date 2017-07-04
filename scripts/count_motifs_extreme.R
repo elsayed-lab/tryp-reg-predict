@@ -58,8 +58,8 @@ load_meme_pwm <- function(filepath) {
 # list of all motifs detected across all modules and all runs
 build_dir <- snakemake@params[['build_dir']]
 
-infiles_5utr <- Sys.glob(file.path(build_dir, 'extreme', '*', '5utr', '*', '*', '*.meme'))
-infiles_3utr <- Sys.glob(file.path(build_dir, 'extreme', '*', '3utr', '*', '*', '*.meme'))
+infiles_5utr <- Sys.glob(file.path(build_dir, 'extreme', '*', 'utr5', '*', '*', '*.meme'))
+infiles_3utr <- Sys.glob(file.path(build_dir, 'extreme', '*', 'utr3', '*', '*', '*.meme'))
 
 # load motif PWMs
 motifs_5utr <- list()
