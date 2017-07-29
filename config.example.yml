@@ -2,11 +2,14 @@
 # Example configuration
 #
 
+# general
+verbose: false
+
 # output path
 output_dir: /path/to/output_dir
 
 #
-# Input files
+# input files
 #
 
 # genome sequence and annotations

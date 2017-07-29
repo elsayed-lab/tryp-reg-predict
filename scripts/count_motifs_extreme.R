@@ -9,10 +9,10 @@
 # region.
 #
 ###############################################################################
-library('Biostrings')
-library('seqLogo')
-library('dplyr')
-library('tibble')
+suppressMessages(library('Biostrings'))
+suppressMessages(library('seqLogo'))
+suppressMessages(library('dplyr'))
+suppressMessages(library('tibble'))
 
 options(stringsAsFactors=FALSE)
 

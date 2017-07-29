@@ -33,7 +33,9 @@ features = features[ratio_n < 0.5]
 
 # save individual gene sequences to FASTA files
 # with open(snakemake.output, 'w') as cluster_outfile:
-for entry in features.itertuples():
+
+# TEMP 2017/07/06
+for entry in list(features.itertuples())[:5]:
     # output filepath
     gene_filepath = snakemake.output[0].replace('__snakemake_dynamic__', entry.gene)
 

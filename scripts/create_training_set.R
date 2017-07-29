@@ -9,9 +9,9 @@
 # features.
 #
 ###############################################################################
-library('caret')
-library('dplyr')
-library('rtracklayer')
+suppressMessages(library('caret'))
+suppressMessages(library('dplyr'))
+suppressMessages(library('rtracklayer'))
 
 options(stringsAsFactors=FALSE)
 

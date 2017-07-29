@@ -95,6 +95,10 @@ rule generate_coexpression_clusters:
     script:
         "scripts/generate_coexpression_clusters.R"
 
+# WORKS
+# rule test:
+#     input: dynamic("build/clusters/{cluster}.csv")
+
 ############
 # Sequences
 ############
@@ -110,8 +114,8 @@ rule get_coexpression_cluster_feature_sequences:
         upstream_intergenic_region="build/features/gene_stats_upstream_intergenic_region.csv",
         clusters="build/clusters/{cluster}.csv"
     output:
-        positive="build/sequences/{feature}/{cluster}.fa",
-        negative="build/sequences/{feature}/negative/{cluster}.fa"
+        positive="build/sequences/{feature}/clusters/{cluster}.fa",
+        negative="build/sequences/{feature}/clusters-negative/{cluster}.fa"
     params:
         feature='{feature}',
         cluster='{cluster}'
@@ -135,29 +139,10 @@ rule get_gene_feature_sequences:
     script:
         "scripts/get_gene_feature_sequences.py"
 
-rule foo:
-    input:
-        dynamic(expand("build/sequences/{feature}/genes/{{gene}}.fa",
-                       feature=FEATURES))
-
-# """
-# Splits up module-wide multifasta sequence files into separate FASTA files for
-# each gene. This is useful for counting k-mers at the gene level using jellyfish
-# """
-# rule split_multifasta_files:
+# rule foo:
 #     input:
-#         "build/sequences/{feature}/{cluster}.fa"
-#     output:
-#         dynamic("build/sequences/{{feature}}/genes/{gene}.fa")
-#     shell:
-#         """
-#         for input_file in {input}; do
-#             for x in `grep '^>' ${{input_file}} | cut -c2-`; do
-#                 echo $x
-#                 awk -v seq="${{x}}" -v RS='>' '$1 == seq {{print RS $0}}' ${{input_file}} > {output}
-#             done
-#         done
-#         """
+#         dynamic(expand("build/sequences/{feature}/genes/{{gene}}.fa",
+#                        feature=FEATURES))
 
 ##############
 # Kmer counts
@@ -229,8 +214,8 @@ http://www.ncbi.nlm.nih.gov/pubmed/24532725
 """
 rule detect_feature_motifs_extreme:
     input:
-        feature_seqs="build/sequences/{feature}/{cluster}.fa",
-        feature_neg_seqs="build/sequences/{feature}/negative/{cluster}.fa"
+        feature_seqs="build/sequences/{feature}/clusters/{cluster}.fa",
+        feature_neg_seqs="build/sequences/{feature}/clusters-negative/{cluster}.fa"
     output:
         "build/motifs/extreme/{run}/{feature}/{cluster}/{cluster}.finished"
     params:
@@ -244,13 +229,15 @@ rule detect_feature_motifs_extreme:
         """
         cd $(dirname {output})
 
+        outdir={config[output_dir]}/{config[version]}
+
         python2 {config[extreme_dir]}/src/GappedKmerSearch.py \
             -l {params.half_length} \
             -ming {params.ming} \
             -maxg {params.maxg} \
             -minsites {params.min_sites} \
-            {config[output_dir]}/{input.feature_seqs} \
-            {config[output_dir]}/{input.feature_neg_seqs} \
+            $outdir/{input.feature_seqs} \
+            $outdir/{input.feature_neg_seqs} \
             {wildcards.cluster}.words
 
         perl {config[extreme_dir]}/src/run_consensus_clusering_using_wm.pl \
@@ -264,8 +251,8 @@ rule detect_feature_motifs_extreme:
         for i in `seq 1 {params.max_motif_seeds}`; do
             if [[ -n $(grep ">cluster$i\s" {wildcards.cluster}.wm) ]]; then
                 python2 {config[extreme_dir]}/src/EXTREME.py \
-                    {config[output_dir]}/{input.feature_seqs} \
-                    {config[output_dir]}/{input.feature_neg_seqs} \
+                    $outdir/{input.feature_seqs} \
+                    $outdir/{input.feature_neg_seqs} \
                     --saveseqs \
                     {wildcards.cluster}.wm \
                     $i
@@ -284,14 +271,14 @@ Performs RNA motif detection using CMFinder
 """
 rule detect_feature_motifs_cmfinder:
     input:
-        feature_seqs="build/sequences/{feature}/{cluster}.fa"
+        feature_seqs="build/sequences/{feature}/clusters/{cluster}.fa"
     output:
         "build/motifs/cmfinder/{feature}/{cluster}/{cluster}.finished"
     shell:
         """
         # create output directory and copy cluster feature sequences
         cd $(dirname {output})
-        cp {config[output_dir]}/{input.feature_seqs} .
+        cp {config[output_dir]}/{config[version]}/{input.feature_seqs} .
 
         # run cmfinder
         cmfinder.pl -f {config[cmfinder_settings][motif_fraction]} \
@@ -322,7 +309,8 @@ rule count_motifs_cmfinder:
     shell:
         """
         # full path to output file
-        outfile={config[output_dir]}/{output}
+        outdir={config[output_dir]}/{config[version]}
+        outfile=$outdir/{output}
 
         cd $(dirname {input})
 
@@ -330,7 +318,7 @@ rule count_motifs_cmfinder:
         # the occurences of that motif
         if ls *.cm 1>/dev/null 2>&1; then
             for motif in *.cm; do
-                for feature_seqs in {config[output_dir]}/build/sequences/*/*.fa; do
+                for feature_seqs in $outdir/build/sequences/*/clusters/*.fa; do
                     cmsearch --noali \
                             -E {config[cmfinder_settings][evalue_cutoff]} \
                             ${{motif}} \
@@ -359,6 +347,10 @@ rule combine_cmsearch_results:
         "build/features/motif_counts_cmfinder.csv",
     script:
         "scripts/combine_cmsearch_results.py"
+
+# DEBUGGING
+# rule foo:
+#     input:
 
 ############################
 # Training set construction

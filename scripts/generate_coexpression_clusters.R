@@ -8,14 +8,19 @@
 # and euclidean distance), hierarchical clustering, and dynamicTreeCut.
 #
 ###############################################################################
-library("dplyr")
-library("dynamicTreeCut")
-library("reshape2")
-library("ggplot2")
-library("tibble")
+suppressMessages(library("dplyr"))
+suppressMessages(library("dynamicTreeCut"))
+suppressMessages(library("reshape2"))
+suppressMessages(library("ggplot2"))
+suppressMessages(library("tibble"))
 
 # make reproducible
 set.seed(1)
+
+if (snakemake@config[['verbose']]) {
+    message("Output:")
+    message(snakemake@output)
+}
 
 # load count table
 expr <- as.matrix(read.csv(snakemake@config[['count_table']], row.names=1))
@@ -55,6 +60,9 @@ for (cluster in unique(clusters$cluster)) {
 
     # save cluster membership list to csv
     outfile <- sub('__snakemake_dynamic__', cluster, snakemake@output[[1]])
+
+    message("OUTFILE")
+    message(outfile)
     write.csv(clusters[clusters$cluster == cluster,], file=outfile, 
               quote=FALSE, row.names=FALSE)
 }
@@ -75,4 +83,6 @@ png(plot_filepath)
 ggplot(plt_dat, aes(x=sample, y=log(expr), group=cluster, color=factor(cluster))) +
     geom_line()
 dev.off()
+
+message('--------------------------4-------------------------')
 
