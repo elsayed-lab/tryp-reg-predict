@@ -59,6 +59,11 @@ Below is a list of all of the requirements needed to run this pipeline.
 - [tibble](https://cran.r-project.org/web/packages/tibble/index.html) (1.2+)
 - [seqLogo](https://www.bioconductor.org/packages/release/bioc/html/seqLogo.html) (1.38+)
 
+Note: In order to avoid running out of memory during execution, the
+hierarchical clustering portion of the EXTREME script
+`run_consensus_clusering_using_wm.pl` may need to be edited to increase the
+value `Xmx`, e.g.: `-Xmx10000m`.
+
 Usage
 -----
 

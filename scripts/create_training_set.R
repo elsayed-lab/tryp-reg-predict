@@ -40,7 +40,7 @@ inputs <- list(
 #)
 
 # retrieve snakemake input files using named keys; the snakemake@input list
-# includes each values twice; once with a numeric key and once using a 
+# includes each value twice; once with a numeric key and once using a 
 # string key, if specified.
 input_keys <- c('extreme', 'cmfinder', 'cai', 'cds',
                 'downstream_intergenic_region', 'upstream_intergenic_region',
@@ -67,6 +67,7 @@ inputs[['downstream_intergenic_region']] <- inputs[['downstream_intergenic_regio
            downstream_ct=ct)
 
 # load gene annotations
+# TODO 2017/08/30: GFF should be passed in
 gff <- import.gff3('/cbcb/lab/nelsayed/ref_data/tcruzi_clbrener_esmeraldo-like/annotation/TriTrypDB-32_TcruziCLBrenerEsmeraldo-like.gff')
 genes <- gff[gff$type == 'gene']
 

@@ -61,8 +61,6 @@ for (cluster in unique(clusters$cluster)) {
     # save cluster membership list to csv
     outfile <- sub('__snakemake_dynamic__', cluster, snakemake@output[[1]])
 
-    message("OUTFILE")
-    message(outfile)
     write.csv(clusters[clusters$cluster == cluster,], file=outfile, 
               quote=FALSE, row.names=FALSE)
 }
@@ -83,6 +81,4 @@ png(plot_filepath)
 ggplot(plt_dat, aes(x=sample, y=log(expr), group=cluster, color=factor(cluster))) +
     geom_line()
 dev.off()
-
-message('--------------------------4-------------------------')
 

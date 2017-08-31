@@ -157,25 +157,15 @@ rule count_kmers:
         "build/kmers/{feature}/{kmer_size}/{gene}.txt"
     shell:
         """
-        # indir=`dirname {input}`
-        # outdir=`dirname {output}`
-
-        # for gene_fasta in ${{indir}}/*.fa; do
-        # intermediate and output filepaths
-        # file_prefix=`basename ${{gene_fasta/.fa/}}`
-        # jf_counts=${{outdir}}/${{file_prefix}}.jf
         jf_counts={output}.jf
 
         # count kmers and save output to plaintext file
         hash_size=`echo $((4 * {wildcards.kmer_size}))`
-        jellyfish count -m {wildcards.kmer_size} -s ${{hash_size}} -t3 -o ${{jf_counts}} ${{gene_fasta}}
+        jellyfish count -m {wildcards.kmer_size} -s ${{hash_size}} -t3 -o ${{jf_counts}} {input}
         jellyfish dump -c ${{jf_counts}} > {output}
 
         # delete intermediate file
         rm ${{jf_counts}}
-        # done
-
-        # touch {output}
         """
 
 """
@@ -279,11 +269,19 @@ rule detect_feature_motifs_cmfinder:
         # create output directory and copy cluster feature sequences
         cd $(dirname {output})
         cp {config[output_dir]}/{config[version]}/{input.feature_seqs} .
+        
+        # echo "----DEBUGGING----"
+        # pwd
+        # cmd="cmfinder.pl -f {config[cmfinder_settings][motif_fraction]} \
+        #             -m {config[cmfinder_settings][min_length]} \
+        #             -b $(basename {input.feature_seqs})"
+        # echo $cmd
+        # echo "-----------------"
 
         # run cmfinder
         cmfinder.pl -f {config[cmfinder_settings][motif_fraction]} \
                     -m {config[cmfinder_settings][min_length]} \
-                    -b $(basename {input.feature_seqs})
+                    -b $(basename {input.feature_seqs}) 2>/dev/null
 
         # rebuilt and calibrate the motif covariance models using infernal
         if ls *.motif.* 1>/dev/null 2>&1; then
