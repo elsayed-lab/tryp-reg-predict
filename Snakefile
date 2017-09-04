@@ -133,9 +133,7 @@ rule get_gene_feature_sequences:
         downstream_intergenic_region="build/features/gene_stats_downstream_intergenic_region.csv",
         upstream_intergenic_region="build/features/gene_stats_upstream_intergenic_region.csv"
     output:
-        dynamic("build/sequences/{feature}/genes/{gene}.fa")
-    params:
-        feature='{feature}'
+        dynamic(expand("build/sequences/{feature}/genes/{{gene}}.fa", feature=FEATURES))
     script:
         "scripts/get_gene_feature_sequences.py"
 
