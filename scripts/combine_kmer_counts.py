@@ -11,41 +11,25 @@ import os
 import glob
 import pandas as pd
 
-def main():
-    """Main script body"""
-    # dataframe to store result in
-    result = pd.DataFrame()
+"""Main script body"""
+# dataframe to store result in
+result = pd.DataFrame()
 
-    # TESTING
+# get a list of all genes
+genes = set([os.path.splitext(os.path.basename(x))[0] for x in snakemake.input])
+
+# iterate over features, one gene at a time
+for gene_id in genes:
+    # data.frame to store results for a single gene
     dat = pd.DataFrame()
 
-    # iterate over features
-    for filepath in snakemake.input:
-        # input_dir = os.path.dirname(filepath)
+    # get all kmer input files for specified gene
+    infiles = [x for x in snakemake.input if gene_id in x]
 
-        # # feature name and k-mer size
-        # base_dir, kmer_size = os.path.split(input_dir)
-        # feature = os.path.split(base_dir)[-1]
-        
-        # # iterate over genes
-        # input_files = glob.glob(os.path.join(input_dir, '*.txt'))
-
-        # intermediate dataframe
-        # dat = pd.DataFrame()
-
-        # print("Parsing kmer counts from %s" % input_dir)
-
-        # for infile in input_files:
-            # skip empty files
-
-        # testing
-        infile = filepath
-
-        if os.stat(infile).st_size == 0:
-            continue
-
-        # gene id
-        gene_id = os.path.splitext(os.path.basename(infile))[0]
+    for infile in infiles:
+        # feature type
+        FEATURE_IDX = 2
+        feature = infile.split('/')[FEATURE_IDX]
 
         # load k-mers as a single column dataframe
         kmers = pd.read_csv(infile, sep=' ', index_col=0, header=None)
@@ -54,25 +38,20 @@ def main():
         kmers.columns = [gene_id]
         kmers.index = feature + '_' + kmers.index
 
-        # add column to result table
-        dat = dat.join(kmers, how='outer')
+        # add rows to gene-specific data frame
+        dat = dat.append(kmers)
 
-        # append to result dataframe
-        # result = result.append(dat)
+    # add column to result table
+    result = result.join(dat, how='outer')
 
-    # TESTING
-    result = dat
+# transpose matrix so that rows=genes and cols=features
+result = result.T
 
-    # transpose matrix so that rows=genes and cols=features
-    result = result.T
+# convert gene id index to a column
+feature_names = sorted(result.columns)
+result['gene'] = result.index
+result = result.reindex_axis(['gene'] +  feature_names, axis=1)
 
-    # convert gene id index to a column
-    feature_names = sorted(result.columns)
-    result['gene'] = result.index
-    result = result.reindex_axis(['gene'] +  feature_names, axis=1)
+# save result to a file
+result.fillna(0).to_csv(snakemake.output[0], index=False)
 
-    # save result to a file
-    result.fillna(0).to_csv(snakemake.output[0], index=False)
-
-if __name__ == '__main__':
-    main()

@@ -17,6 +17,43 @@ ruleorder: get_gene_feature_sequences > get_coexpression_cluster_feature_sequenc
 EXTREME_RUNS = config['extreme_settings'].keys()
 FEATURES = ['utr5', 'utr3', 'cds', 'downstream_intergenic_region', 'upstream_intergenic_region']
 
+##########################################################################
+# Determine list of genes with required information for each feature type
+##########################################################################
+
+# function to filter out entries with mostly N's
+def filter_n(features):
+    ratio_n = features.seq.str.count('N') / features.seq.apply(len)
+    return features[ratio_n < 0.5]
+
+ig = pd.read_csv(config['intergenic_stats'])
+utr5 = pd.read_csv(config['5utr_stats'])
+utr3 = pd.read_csv(config['3utr_stats'])
+
+# upstream intergenic region
+ig['gene'] = ig['left_gene'].where(ig['strand'] == 1, ig['right_gene'])
+upstream_ids = filter_n(ig)['gene']
+
+# downstream intergenic regions
+ig['gene'] = ig['right_gene'].where(ig['strand'] == 1, ig['left_gene'])
+downstream_ids = filter_n(ig)['gene']
+
+# For UTRs, if predicted UTR length is very short, use the "static" assumed
+# UTR length values instead (e.g. for T. cruzi, 75nt 5' UTR and 125nt 3' UTR)
+short_5utrs = utr5.static_seq.apply(len) > utr5.seq.apply(len)
+utr5.loc[short_5utrs, 'seq'] = utr5[short_5utrs].static_seq
+
+short_3utrs = utr3.static_seq.apply(len) > utr3.seq.apply(len)
+utr3.loc[short_3utrs, 'seq'] = utr3[short_3utrs].static_seq
+
+utr5_ids = list(utr5.gene)
+utr3_ids = list(utr3.gene)
+
+GENES = list(set(utr5_ids).intersection(utr3_ids).intersection(upstream_ids).intersection(downstream_ids))
+
+# TESTING 2017/09/04
+GENES = GENES[:3]
+
 ###############################
 # Gene structure & composition
 ###############################
@@ -133,7 +170,9 @@ rule get_gene_feature_sequences:
         downstream_intergenic_region="build/features/gene_stats_downstream_intergenic_region.csv",
         upstream_intergenic_region="build/features/gene_stats_upstream_intergenic_region.csv"
     output:
-        dynamic(expand("build/sequences/{feature}/genes/{{gene}}.fa", feature=FEATURES))
+        expand("build/sequences/{feature}/genes/{gene}.fa", gene=GENES, feature=FEATURES)
+    params:
+        genes=GENES
     script:
         "scripts/get_gene_feature_sequences.py"
 
@@ -171,9 +210,10 @@ Combines kmer counts for various features and size of k into a single CSV file.
 """
 rule combine_kmer_counts:
     input:
-        dynamic(expand("build/kmers/{feature}/{kmer_size}/{{gene}}.txt",
-                       feature=FEATURES, 
-                       kmer_size=['3', '4', '5']))
+        expand("build/kmers/{feature}/{kmer_size}/{gene}.txt",
+                feature=FEATURES,
+                kmer_size=['3', '4', '5'],
+                gene=GENES)
     output:
         "build/features/kmer_counts.csv"
     script:
