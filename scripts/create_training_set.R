@@ -15,8 +15,8 @@ suppressMessages(library('rtracklayer'))
 
 options(stringsAsFactors=FALSE)
 
-# TODO: generalize
-feature_dir <- '/cbcb/nelsayed-scratch/keith/reg-predict/tcruzi/2.0/build/features'
+# directory containing features
+feature_dir <- sub("model/training_set.csv", "features", snakemake@output[[1]])
 
 inputs <- list(
     '5utr_stats'=read.csv(file.path(feature_dir, '5utr_stats.csv')) %>%
@@ -67,8 +67,7 @@ inputs[['downstream_intergenic_region']] <- inputs[['downstream_intergenic_regio
            downstream_ct=ct)
 
 # load gene annotations
-# TODO 2017/08/30: GFF should be passed in
-gff <- import.gff3('/cbcb/lab/nelsayed/ref_data/tcruzi_clbrener_esmeraldo-like/annotation/TriTrypDB-32_TcruziCLBrenerEsmeraldo-like.gff')
+gff <- import.gff3(snakemake@config[['input_gff']])
 genes <- gff[gff$type == 'gene']
 
 # add zero entries to cmfinder results for genes with no motif matches
@@ -128,9 +127,9 @@ dat <- dat[gene_mask,]
 #feature_mask <- apply(dat, 2, function (x) { sum(is.na(x)) < 100 })
 #print(sprintf("Removing %d/%d features with many missing values", sum(!feature_mask), ncol(dat)))
 
-# remove features which are present for only a single gene
-feature_mask <- apply(dat, 2, function (x) { sum(x != 0, na.rm=TRUE) }) > 1
-print(sprintf("Removing %d/%d features with many missing values", sum(!feature_mask), ncol(dat)))
+# remove features with few non-zero values
+feature_mask <- apply(dat, 2, function (x) { sum(x != 0, na.rm=TRUE) }) >= 5
+print(sprintf("Removing %d/%d features with few non-zero values.", sum(!feature_mask), ncol(dat)))
 dat <- dat[,feature_mask]
 
 # Load gene neighbor information and extend training set to include features

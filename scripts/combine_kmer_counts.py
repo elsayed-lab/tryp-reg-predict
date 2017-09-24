@@ -19,14 +19,18 @@ result = pd.DataFrame()
 genes = set([os.path.splitext(os.path.basename(x))[0] for x in snakemake.input])
 
 # iterate over features, one gene at a time
-for gene_id in genes:
+for i, gene_id in enumerate(genes):
     # data.frame to store results for a single gene
     dat = pd.DataFrame()
 
     # get all kmer input files for specified gene
-    infiles = [x for x in snakemake.input if gene_id in x]
+    infiles = [x for x in snakemake.input if gene_id + ".txt" in x]
 
     for infile in infiles:
+        # skip empty files; can happen with sequences containing all N's
+        if os.stat(infile).st_size == 0:
+            continue
+
         # feature type
         FEATURE_IDX = 2
         feature = infile.split('/')[FEATURE_IDX]

@@ -30,6 +30,17 @@ intergenic_stats: /path/to/intercds_regions.csv
 polypyrimidine_stats: /path/to/polypyrimidine_tracts.csv
 
 #
+# gene clusters (optional)
+# 
+# To use a pre-existing clustering, provide a file with columns "gene" and
+# "cluster".
+#
+# If no such file is specified, hierarchical clustering will performed
+# on-the-fly.
+#
+gene_clustering: ''
+
+#
 # Software settings
 #
 extreme_dir: /path/to/extreme

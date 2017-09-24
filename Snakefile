@@ -49,10 +49,20 @@ utr3.loc[short_3utrs, 'seq'] = utr3[short_3utrs].static_seq
 utr5_ids = list(utr5.gene)
 utr3_ids = list(utr3.gene)
 
-GENES = list(set(utr5_ids).intersection(utr3_ids).intersection(upstream_ids).intersection(downstream_ids))
+with open(config['input_cds_fasta']) as fp:
+    # parse gene ids from FASTA header entries, e.g.:
+    # >TcCLB.410961.10:mRNA | organism=Trypanosoma_cruzi...
+    fasta_gene_ids = []
 
-# TESTING 2017/09/04
-GENES = GENES[:3]
+    for line in fp.readlines():
+        if line.startswith('>'):
+            fasta_gene_ids.append(line.split(':')[0][1:])
+
+# list of all genes
+GENES = list(set(utr5_ids).intersection(utr3_ids)
+                          .intersection(fasta_gene_ids)
+                          .intersection(upstream_ids)
+                          .intersection(downstream_ids))
 
 ###############################
 # Gene structure & composition
@@ -124,17 +134,14 @@ rule compute_cai:
 # Clustering
 #############
 """
-Clusters genes based on their co-expression profiles
+If a pre-existing gene clustering is provided in the config file, it will be
+used, otherwise hierarhical clustering will be performed.
 """
 rule generate_coexpression_clusters:
     output:
         dynamic("build/clusters/{cluster}.csv")
     script:
         "scripts/generate_coexpression_clusters.R"
-
-# WORKS
-# rule test:
-#     input: dynamic("build/clusters/{cluster}.csv")
 
 ############
 # Sequences
@@ -408,5 +415,19 @@ rule create_training_set:
         "build/model/training_set.csv"
     script:
         "scripts/create_training_set.R"
+
+"""
+Trains Random Forest models for random subsets of clusters and features, and
+determines variable importance for each model. Features which never have a
+sufficiently high variable importance score are filtered out to generate a
+smaller, more informative training set.
+"""
+rule filter_training_set:
+    input:
+        "build/model/training_set.csv"
+    output:
+        "build/model/training_set_filtered.csv"
+    script:
+        "scripts/create_filtered_training_set.R"
 
 # vim: ft=python
