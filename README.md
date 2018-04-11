@@ -42,12 +42,15 @@ Below is a list of all of the requirements needed to run this pipeline.
 
 - [CMFinder](http://bio.cs.washington.edu/CMfinderWeb/CMfinderDownload.pl) (0.2)
 - [Infernal](http://eddylab.org/infernal/) (1.1.2+)
+- [EXTREME](https://github.com/uci-cbcl/EXTREME) (2.0)
+- [Jellyfish]() ()
 
 #### Python requirements
 
 - [Python 3](https://www.python.org/downloads/)
 - [Snakemake](https://snakemake.readthedocs.io/en/latest/) (3.10.0+)
 - [Biopython](http://biopython.org/wiki/Biopython) (1.6.8+)
+- [Numpy]() ()
 - [Pandas](http://pandas.pydata.org/) (0.19.2+)
 - [PyYAML](http://pyyaml.org/)(3.12+)
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 ###############################################################################
-# 
+#
 # create_training_set.R
 # keith hughitt (khughitt@umd.edu)
 #
@@ -24,11 +24,11 @@ inputs <- list(
     '3utr_stats'=read.csv(file.path(feature_dir, '3utr_stats.csv')) %>%
         select(gene, utr3_len=length, utr3_gc=gc, utr3_ct=ct),
     'polypyr_tracts'=read.csv(file.path(feature_dir, 'polypyrimidine_tracts.csv')) %>%
-        select(gene, sl_dist, polya_dist, tract_length, 
+        select(gene, sl_dist, polya_dist, tract_length,
                polypyr_gc=gc, polypyr_ct=ct)
 )
 
-# Debugging 
+# Debugging
 #snakemake_input <- list(
 #    extreme=file.path(feature_dir, 'motif_counts_extreme.csv'),
 #    cmfinder=file.path(feature_dir, 'motif_counts_cmfinder.csv'),
@@ -40,7 +40,7 @@ inputs <- list(
 #)
 
 # retrieve snakemake input files using named keys; the snakemake@input list
-# includes each value twice; once with a numeric key and once using a 
+# includes each value twice; once with a numeric key and once using a
 # string key, if specified.
 input_keys <- c('extreme', 'cmfinder', 'cai', 'cds',
                 'downstream_intergenic_region', 'upstream_intergenic_region',
@@ -72,11 +72,11 @@ genes <- gff[gff$type == 'gene']
 
 # add zero entries to cmfinder results for genes with no motif matches
 # (otherwise they will becomes NA's later on)
-cmfinder_missing <- inputs[['cds']]$gene[!inputs[['cds']]$gene %in% 
+cmfinder_missing <- inputs[['cds']]$gene[!inputs[['cds']]$gene %in%
                                          inputs[['cmfinder']]$gene]
 print(sprintf("ADDING %d missing cmfinder entries", length(cmfinder_missing)))
 cmfinder_placeholders <- data.frame(
-    gene=cmfinder_missing, 
+    gene=cmfinder_missing,
     matrix(0, length(cmfinder_missing), ncol(inputs[['cmfinder']]) - 1)
 )
 colnames(cmfinder_placeholders) <- colnames(inputs[['cmfinder']])
@@ -165,7 +165,7 @@ for (i in 1:length(genes)) {
 
         if (upstream_gid %in% rownames(dat)) {
             upstream_features <- dat[rownames(dat) == upstream_gid, 1:num_features]
-            dat[rownames(dat) == gid, upstream_cols] <- upstream_features 
+            dat[rownames(dat) == gid, upstream_cols] <- upstream_features
         }
 
     }
@@ -176,7 +176,7 @@ for (i in 1:length(genes)) {
 
         if (downstream_gid %in% rownames(dat)) {
             downstream_features <- dat[rownames(dat) == downstream_gid, 1:num_features]
-            dat[rownames(dat) == gid, downstream_cols] <- downstream_features 
+            dat[rownames(dat) == gid, downstream_cols] <- downstream_features
         }
 
     }

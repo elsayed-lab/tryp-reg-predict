@@ -66,23 +66,33 @@ motifs_5utr <- list()
 
 for (infile in infiles_5utr) {
     # load motif
-    motifs_5utr[[infile]] <- load_meme_pwm(infile)
+    tmp <- tryCatch({
+        pwm <- load_meme_pwm(infile)
+        motifs_5utr[[infile]] <- pwm
 
-    # generate sequence logo
-    png(sub('.meme', '.png', infile))
-    seqLogo(motifs_5utr[[infile]])
-    dev.off()
+        # generate sequence logo
+        png(sub('.meme', '.png', infile))
+        seqLogo(motifs_5utr[[infile]])
+        dev.off()
+    }, error = function(e) {
+        message(sprintf("Error parsing MEME output: %s", infile))
+    })
 }
 
 motifs_3utr <- list()
 
 for (infile in infiles_3utr) {
-    motifs_3utr[[infile]] <- load_meme_pwm(infile)
+    tmp <- tryCatch({
+        pwm <- load_meme_pwm(infile)
+        motifs_3utr[[infile]] <- pwm
 
-    # generate sequence logo
-    png(sub('.meme', '.png', infile))
-    seqLogo(motifs_3utr[[infile]])
-    dev.off()
+        # generate sequence logo
+        png(sub('.meme', '.png', infile))
+        seqLogo(motifs_3utr[[infile]])
+        dev.off()
+    }, error = function(e) {
+        message(sprintf("Error parsing MEME output: %s", infile))
+    })
 }
 
 #

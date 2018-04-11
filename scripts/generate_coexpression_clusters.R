@@ -21,7 +21,17 @@ if (snakemake@config[['verbose']]) {
 if (snakemake@config[['gene_clusters']] != '') {
     message(sprintf("Using existing gene clustering located at: %s",
                     snakemake@config[['gene_clusters']]))
-    clusters <- read.csv(snakemake@config[['gene_clusters']])
+    # CSV
+    if (endsWith(snakemake@config[['gene_clusters']], 'csv')) {
+        clusters <- read.csv(snakemake@config[['gene_clusters']])
+    } else {
+        # Tab-delimited (consensus network)
+        clusters <- read.delim(snakemake@config[['gene_clusters']], sep='\t')
+        colnames(clusters) <- c('gene', 'color', 'cluster', 'description')
+
+        # drop description (not needed and contains commas)
+        clusters <- clusters[,c('gene', 'color', 'cluster')]
+    }
 } else {
 ###############################################################################
 #
