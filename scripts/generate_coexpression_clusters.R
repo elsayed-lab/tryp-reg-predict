@@ -95,7 +95,8 @@ if (snakemake@config[['gene_clusters']] != '') {
     dev.off()
 
     # save clustering results as a single file
-    outfile <- sub('__snakemake_dynamic__', 'clusters', snakemake@output[[1]])
+    #outfile <- sub('__snakemake_dynamic__', 'clusters', snakemake@output[[1]])
+    outfile <- 'features/coex_clusters.csv'
     write.csv(clusters, file=outfile, quote=FALSE, row.names=FALSE)
 }
 

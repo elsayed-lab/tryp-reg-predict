@@ -8,6 +8,12 @@ verbose: false
 # output path
 output_dir: /path/to/output_dir
 
+# general
+verbose: true
+
+# version
+version: '5.0'
+
 #
 # input files
 #
@@ -19,7 +25,6 @@ input_cds_fasta: /ref/genomes/TriTrypDB-29_LmajorFriedlin_AnnotatedCDSs.fasta
 
 # count table and module assignments
 count_table: /path/to/lmajor_raw_counts.csv
-module_assignments: /path/to/lmajor_cluster_assignments.csv
 
 # utr statistics (length, gc- and ct-richness)
 5utr_stats: /path/to/utr5_stats.csv
@@ -29,25 +34,46 @@ module_assignments: /path/to/lmajor_cluster_assignments.csv
 intergenic_stats: /path/to/intercds_regions.csv
 polypyrimidine_stats: /path/to/polypyrimidine_tracts.csv
 
-#
-# gene clusters (optional)
-# 
-# To use a pre-existing clustering, provide a file with columns "gene" and
-# "cluster".
-#
-# If no such file is specified, hierarchical clustering will performed
-# on-the-fly.
-#
-gene_clustering: ''
+# gene clustering;
+# tab-delimited file containing fields "gene_id" and "cluster"
+gene_clusters: /path/to/gene_cluster_mapping.tab
 
-#
-# Software settings
-#
-extreme_dir: /path/to/extreme
-extreme_num_neg_seqs: 250,
-extreme_half_length:  9,
-extreme_min_gap_size: 60,
-extreme_max_gap_size: 69,
-extreme_min_sites   : 3,
-extreme_clustering_threshold: 0.3
+# co-expression clustering parameters (if no pre-existing clustering provided)
+min_cluster_size: 15
+deep_split: false
+
+# CMFinder settings
+cmfinder_settings:
+  motif_fraction: 0.3
+  min_length: 15
+  evalue_cutoff: 0.1
+
+# EXTREME settings
+extreme_dir: /path/to/EXTREME
+extreme_num_neg_seqs: 250
+extreme_settings:
+  run1:
+      num_neg_seqs: 250
+      half_length:  4
+      min_gap_size: 0
+      max_gap_size: 10
+      min_sites   : 4
+      clustering_threshold: 0.3
+      max_motif_seeds: 5
+  run2:
+      num_neg_seqs: 250
+      half_length:  6
+      min_gap_size: 0 
+      max_gap_size: 10 
+      min_sites   : 3
+      clustering_threshold: 0.3
+      max_motif_seeds: 5
+  run3:
+      num_neg_seqs: 250
+      half_length:  6
+      min_gap_size: 11
+      max_gap_size: 20 
+      min_sites   : 3
+      clustering_threshold: 0.3
+      max_motif_seeds: 5
 

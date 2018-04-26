@@ -16,7 +16,7 @@ suppressMessages(library("tibble"))
 
 set.seed(1)
 
-train <- read.csv(snakemake@input[[1]], row.names=1)
+train <- read.csv(snakemake@input[['unfiltered']], row.names=1)
 
 # output files for feature importance and model error rate stats
 feature_importance_file <- sub('training_set_filtered.csv',
@@ -113,7 +113,11 @@ clusters_tested <- c()
 oob_error_rates <- c()
 
 # TEMP
-clusters <- read.csv('/cbcb/nelsayed-scratch/keith/reg-predict/tcruzi/3.0/build/clusters/clusters.csv')
+#clusters <- read.csv('/cbcb/nelsayed-scratch/keith/reg-predict/tcruzi/3.0/build/clusters/clusters.csv')
+#clusters <- read.csv(snakemake@input[['clusters']])
+clusters <- read.csv(file.path('build', 'features', 'coex_clusters.csv'))
+message('WD:')
+message(getwd())
 clusters <- clusters[clusters$gene %in% rownames(train),]
 
 # Exclude clusters containing only a single element (can happen due to
@@ -139,7 +143,7 @@ for (i in 1:NUM_ITERATIONS) {
 
     # randomly select features
     num_features <- FEATURE_TO_GENE_RATIO * nrow(train_subset)
-    train_subset <- train_subset[,sample(1:ncol(train_subset), num_features)]
+    train_subset <- train_subset[,sample(ncol(train_subset), min(num_features, ncol(train_subset)))]
 
     # discard features with only a few non-zero entries
     num_nonzeros <- apply(train_subset, 2, function(x) { sum(x != 0, na.rm=TRUE) })

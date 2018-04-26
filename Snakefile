@@ -136,10 +136,13 @@ rule compute_cai:
 """
 If a pre-existing gene clustering is provided in the config file, it will be
 used, otherwise hierarhical clustering will be performed.
+
+TODO: Add an intermediate step generating a single file containing
+all clustering results: "features/clusters.csv".
 """
 rule generate_coexpression_clusters:
     output:
-        dynamic("build/clusters/{cluster}.csv")
+        dynamic("build/clusters/{cluster}.csv"),
     script:
         "scripts/generate_coexpression_clusters.R"
 
@@ -315,18 +318,18 @@ rule detect_feature_motifs_cmfinder:
         cd $(dirname {output})
         cp {config[output_dir]}/{config[version]}/{input.feature_seqs} .
         
-        # echo "----DEBUGGING----"
-        # pwd
-        # cmd="cmfinder.pl -f {config[cmfinder_settings][motif_fraction]} \
-        #             -m {config[cmfinder_settings][min_length]} \
-        #             -b $(basename {input.feature_seqs})"
-        # echo $cmd
-        # echo "-----------------"
+        echo "----DEBUGGING----"
+        pwd
+        cmd="cmfinder.pl -f {config[cmfinder_settings][motif_fraction]} \
+                    -m1 {config[cmfinder_settings][min_length]} \
+                    $(basename {input.feature_seqs})"
+        echo $cmd
+        echo "-----------------"
 
         # run cmfinder
         cmfinder.pl -f {config[cmfinder_settings][motif_fraction]} \
-                    -m {config[cmfinder_settings][min_length]} \
-                    -b $(basename {input.feature_seqs}) 2>/dev/null
+                    -m1 {config[cmfinder_settings][min_length]} \
+                    $(basename {input.feature_seqs}) 2>/dev/null
 
         # rebuilt and calibrate the motif covariance models using infernal
         if ls *.motif.* 1>/dev/null 2>&1; then
@@ -424,7 +427,9 @@ smaller, more informative training set.
 """
 rule filter_training_set:
     input:
-        "build/model/training_set.csv"
+        unfiltered="build/model/training_set.csv"
+        # manually generated for now; see TODO note in cluster generation rule
+        # clusters="features/coex_clusters.csv" 
     output:
         "build/model/training_set_filtered.csv"
     script:
