@@ -62,6 +62,14 @@ Below is a list of all of the requirements needed to run this pipeline.
 - [tibble](https://cran.r-project.org/web/packages/tibble/index.html) (1.2+)
 - [seqLogo](https://www.bioconductor.org/packages/release/bioc/html/seqLogo.html) (1.38+)
 
+```sh
+conda create -n reg-predict --file requirements.txt \
+    --channel bioconda \
+    --channel conda-forge \
+    --channel pytorch
+```
+
+
 Note: In order to avoid running out of memory during execution, the
 hierarchical clustering portion of the EXTREME script
 `run_consensus_clusering_using_wm.pl` may need to be edited to increase the

@@ -208,7 +208,7 @@ rule count_kmers:
 
         # count kmers and save output to plaintext file
         hash_size=`echo $((4 * {wildcards.kmer_size}))`
-        jellyfish count -m {wildcards.kmer_size} -s ${{hash_size}} -t2 -o ${{jf_counts}} {input}
+        jellyfish count -m {wildcards.kmer_size} -s ${{hash_size}} -t1 -o ${{jf_counts}} {input}
         jellyfish dump -c ${{jf_counts}} > {output}
 
         # delete intermediate file
@@ -222,7 +222,7 @@ rule combine_kmer_counts:
     input:
         expand("build/kmers/{feature}/{kmer_size}/{gene}.txt",
                 feature=FEATURES,
-                kmer_size=['3', '4'],
+                kmer_size=['4', '5'],
                 gene=GENES)
     output:
         "build/features/kmer_counts.csv"
